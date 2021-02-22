@@ -18,6 +18,7 @@
 [commit]
     template = ~/.gitmessage
 [core]
+    excludesfile = ~/.gitignore
     editor = vim
 [push]
     followTags = true
