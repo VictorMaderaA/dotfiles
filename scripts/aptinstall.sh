@@ -24,7 +24,7 @@ function install {
 # install nmap
 # install openvpn
 # install tmux
-# install vim
+install vim
 
 # Image processing
 install gimp

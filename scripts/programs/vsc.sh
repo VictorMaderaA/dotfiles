@@ -24,3 +24,5 @@ install xabikos.JavaScriptSnippets
 install eamodio.gitlens
 install kamikillerto.vscode-colorize
 install vscode-icons-team.vscode-icons
+
+echo "Executed vsc.sh"

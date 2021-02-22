@@ -123,15 +123,18 @@ fi
 
 
 # Aliases
-alias dr='sudo docker-compose run --rm'
-alias siteup='sudo docker-compose up -d site'
-alias sitedown='sudo docker-compose down'
+alias docker='sudo docker'
+alias docker-compose='sudo docker-compose'
+alias dr='docker-compose run --rm'
+alias siteup='docker-compose up -d site'
+alias sitedown='docker-compose down'
 alias migrate='dr artisan db:wipe && dr artisan migrate:refresh'
 alias seed='dr artisan db:seed'
 alias data='migrate && seed'
 alias comp='dr composer install'
 alias commit='git add . && git commit'
 alias runtest='dr php vendor/bin/phpunit'
+alias dockerprune='docker image prune -a && docker container prune && docker volume prune && docker network prune && docker system prune'
 
 # Color prompt
 export TERM=xterm-256color

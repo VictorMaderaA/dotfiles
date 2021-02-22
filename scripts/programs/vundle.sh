@@ -6,3 +6,4 @@ cd $HOME/.vim/bundle
 git clone git://github.com/VundleVim/Vundle.vim.git
 vim +PluginInstall +qall
 
+echo "Executed vundle.sh"
