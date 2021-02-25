@@ -32,3 +32,5 @@
 	cm = commit -m
 	d = diff
 	dv = difftool -t vimdiff -y
+[credential]
+	helper = store
