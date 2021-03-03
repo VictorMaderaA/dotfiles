@@ -135,3 +135,5 @@ alias comp='dr composer install'
 alias commit='git add . && git commit'
 alias runtest='dr php vendor/bin/phpunit'
 alias dockerprune='docker image prune -a && docker container prune && docker volume prune && docker network prune && docker system prune'
+# fauna autocomplete setup
+FAUNA_AC_BASH_SETUP_PATH=/home/developer/.cache/fauna-shell/autocomplete/bash_setup && test -f $FAUNA_AC_BASH_SETUP_PATH && source $FAUNA_AC_BASH_SETUP_PATH;
