@@ -138,3 +138,11 @@ alias dockerprune='docker image prune -a && docker container prune && docker vol
 alias dockerstop='docker stop $(docker ps -a -q)'
 alias dopen='nautilus --browser $(pwd)'
 alias vpngelt='cd ~/openvpngelt/ && sudo openvpn --config client.ovpn'
+
+vpn() {
+    if [ "$1" == "gelt" ]; then
+        vpngelt
+    else
+        echo "Invalid, try with: gelt"
+    fi
+}
