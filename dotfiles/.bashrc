@@ -146,3 +146,7 @@ vpn() {
         echo "Invalid, try with: gelt"
     fi
 }
+
+dockerbash() {
+    docker exec -it $1 /bin/bash
+}
