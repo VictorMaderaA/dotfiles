@@ -2,6 +2,7 @@
 
 ./symlink.sh
 ./aptinstall.sh
+./snapinstall.sh
 ./programs.sh
 ./desktop.sh
 
