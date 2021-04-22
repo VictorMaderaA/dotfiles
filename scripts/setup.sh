@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# sudo chmod 600 .ssh/id_ed25519
+# ssh-add
+
 ./symlink.sh
 ./aptinstall.sh
 ./snapinstall.sh
