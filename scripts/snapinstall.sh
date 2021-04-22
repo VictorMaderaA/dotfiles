@@ -7,7 +7,7 @@ function install {
 
   if [ $? -ne 0 ]; then
     echo "Installing: ${1}..."
-    sudo snap install $1
+    sudo snap install $1 $2
   else
     echo "Already installed: ${1}"
   fi
@@ -18,13 +18,13 @@ install notion-snap
 install bitwarden
 
 #Development
-install datagrip
-install phpstorm
-install webstorm
+install datagrip --classic
+install phpstorm --classic
+install webstorm --classic
 #install pycharm-community
-install pycharm-professional
+install pycharm-professional --classic
 install postman
-install node
+install node --classic
 
 #Entreteinment
 install spotify
