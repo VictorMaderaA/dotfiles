@@ -16,6 +16,8 @@ function install {
 #Productivity
 install notion-snap
 install bitwarden
+install slack --classic
+
 
 #Development
 install datagrip --classic
