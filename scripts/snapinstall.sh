@@ -23,6 +23,7 @@ install slack --classic
 install datagrip --classic
 install phpstorm --classic
 install webstorm --classic
+install ngrok
 #install pycharm-community
 install pycharm-professional --classic
 install postman
