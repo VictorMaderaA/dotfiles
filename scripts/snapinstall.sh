@@ -17,6 +17,7 @@ function install {
 install notion-snap
 install bitwarden
 install slack --classic
+install mailspring
 
 
 #Development

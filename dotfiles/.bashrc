@@ -139,9 +139,16 @@ alias dockerstop='docker stop $(docker ps -a -q)'
 alias dopen='nautilus --browser $(pwd)'
 alias vpngelt='cd ~/openvpngelt/ && sudo openvpn --config client.ovpn'
 
+alias vpnctsup='sudo wg-quick up wg0'
+alias vpnctsdown='sudo wg-quick down wg0'
+
 vpn() {
     if [ "$1" == "gelt" ]; then
         vpngelt
+    elif [[ "$1" == "cts" && "$2" == "down" ]]; then
+        vpnctsdown
+    elif [ "$1" == "cts" ]; then
+        vpnctsup
     else
         echo "Invalid, try with: gelt"
     fi
