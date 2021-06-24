@@ -17,3 +17,7 @@ source ~/.bashrc
 
 # Fun hello
 figlet "... and we're back!" | lolcat
+
+echo CONFIGURADOR FNMT-RCM https://www.sede.fnmt.gob.es/descargas/descarga-software/instalacion-software-generacion-de-claves
+echo AUTOFIRMA https://firmaelectronica.gob.es/Home/Descargas.html
+echo Distribuciones Linux https://www.dnielectronico.es/PortalDNIe/PRF1_Cons02.action?pag=REF_1112

@@ -24,6 +24,7 @@ install mailspring
 install datagrip --classic
 install phpstorm --classic
 install webstorm --classic
+install insomnia
 install ngrok
 #install pycharm-community
 install pycharm-professional --classic

@@ -142,6 +142,7 @@ alias vpngelt='cd ~/openvpngelt/ && sudo openvpn --config client.ovpn'
 alias vpnctsup='sudo wg-quick up wg0'
 alias vpnctsdown='sudo wg-quick down wg0'
 
+
 vpn() {
     if [ "$1" == "gelt" ]; then
         vpngelt
@@ -153,6 +154,32 @@ vpn() {
         echo "Invalid, try with: gelt"
     fi
 }
+
+gelt() {
+    if [ "$1" == "vpn" ]; then
+        vpngelt
+    elif [[ "$1" == "ssh" && "$2" == "apidev" ]]; then
+        ssh vmadera@192.168.14.11
+    elif [[ "$1" == "ssh" && "$2" == "api1" ]]; then
+        ssh vmadera@192.168.11.11
+    elif [[ "$1" == "ssh" && "$2" == "api2" ]]; then
+        ssh vmadera@192.168.12.50
+    elif [[ "$1" == "ssh" && "$2" == "api3" ]]; then
+        ssh vmadera@192.168.13.50
+    elif [[ "$1" == "ssh" && "$2" == "api4" ]]; then
+        ssh vmadera@192.168.16.50
+    elif [[ "$1" == "ssh" && "$2" == "apitools" ]]; then
+        ssh vmadera@192.168.15.50
+    elif [[ "$1" == "ssh" && "$2" == "back" ]]; then
+        ssh vmadera@192.168.11.12
+    elif [[ "$1" == "ssh" && "$2" == "backdev" ]]; then
+        ssh vmadera@192.168.14.12
+    else
+        echo "Invalid, Command"
+    fi
+}
+
+
 
 dockerbash() {
     docker exec -it $1 /bin/bash
