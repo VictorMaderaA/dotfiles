@@ -174,6 +174,30 @@ gelt() {
         ssh vmadera@192.168.11.12
     elif [[ "$1" == "ssh" && "$2" == "backdev" ]]; then
         ssh vmadera@192.168.14.12
+    elif [[ "$1" == "ssh" && "$2" == "apibr1" ]]; then
+        ssh vmadera@192.168.12.11
+    elif [[ "$1" == "ssh" && "$2" == "apibr2" ]]; then
+        ssh vmadera@192.168.13.51
+    elif [[ "$1" == "ssh" && "$2" == "apibr3" ]]; then
+        ssh vmadera@192.168.16.51
+    elif [[ "$1" == "ssh" && "$2" == "apiar1" ]]; then
+        ssh vmadera@192.168.13.11
+    elif [[ "$1" == "ssh" && "$2" == "apiar2" ]]; then
+        ssh vmadera@192.168.12.52
+    elif [[ "$1" == "ssh" && "$2" == "apiar3" ]]; then
+        ssh vmadera@192.168.16.52
+    elif [[ "$1" == "ssh" && "$2" == "apico1" ]]; then
+        ssh vmadera@192.168.11.3
+    elif [[ "$1" == "ssh" && "$2" == "apico2" ]]; then
+        ssh vmadera@192.168.12.3
+    elif [[ "$1" == "ssh" && "$2" == "apico3" ]]; then
+        ssh vmadera@192.168.13.3
+    elif [[ "$1" == "ssh" && "$2" == "apimx1" ]]; then
+        ssh vmadera@192.168.16.11
+    elif [[ "$1" == "ssh" && "$2" == "apimx2" ]]; then
+        ssh vmadera@192.168.12.53
+    elif [[ "$1" == "ssh" && "$2" == "apimx3" ]]; then
+        ssh vmadera@192.168.13.53
     else
         echo "Invalid, Command"
     fi
