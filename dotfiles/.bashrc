@@ -57,7 +57,7 @@ if [ -n "$force_color_prompt" ]; then
 fi
 
 if [ "$color_prompt" = yes ]; then
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\n\[\033[01;34m\]\w\[\033[00m\]\n\$ '
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[38;5;8m\]\u@\h\[$(tput sgr0)\] \[$(tput sgr0)\]\[\033[38;5;2m\]($(git branch 2>/dev/null | grep '^*' | colrm 1 2))\[$(tput sgr0)\]\[\033[38;5;6m\][\w]\[$(tput sgr0)\]\n\[$(tput sgr0)\]\[$(tput bold)\]\[\033[38;5;7m\]\W\[$(tput sgr0)\]: \[$(tput sgr0)\]'
 else
     PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
 fi
@@ -137,19 +137,18 @@ alias runtest='dr php vendor/bin/phpunit'
 alias dockerprune='docker image prune -a && docker container prune && docker volume prune && docker network prune && docker system prune'
 alias dockerstop='docker stop $(docker ps -a -q)'
 alias dopen='nautilus --browser $(pwd)'
-alias vpngelt='cd ~/openvpngelt/ && sudo openvpn --config client.ovpn'
+alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
 
-alias vpnctsup='sudo wg-quick up wg0'
-alias vpnctsdown='sudo wg-quick down wg0'
+alias vpngelt='cd ~/openvpngelt/ && openvpn3 session-start --config client.ovpn'
+alias vpnclose='pgrep openvpn | xargs sudo kill -9'
+alias vpnstatus='openvpn3 sessions-list'
+
+alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
 
 
 vpn() {
     if [ "$1" == "gelt" ]; then
         vpngelt
-    elif [[ "$1" == "cts" && "$2" == "down" ]]; then
-        vpnctsdown
-    elif [ "$1" == "cts" ]; then
-        vpnctsup
     else
         echo "Invalid, try with: gelt"
     fi
@@ -159,45 +158,37 @@ gelt() {
     if [ "$1" == "vpn" ]; then
         vpngelt
     elif [[ "$1" == "ssh" && "$2" == "apidev" ]]; then
-        ssh vmadera@192.168.14.11
-    elif [[ "$1" == "ssh" && "$2" == "api1" ]]; then
-        ssh vmadera@192.168.11.11
-    elif [[ "$1" == "ssh" && "$2" == "api2" ]]; then
-        ssh vmadera@192.168.12.50
-    elif [[ "$1" == "ssh" && "$2" == "api3" ]]; then
-        ssh vmadera@192.168.13.50
-    elif [[ "$1" == "ssh" && "$2" == "api4" ]]; then
-        ssh vmadera@192.168.16.50
-    elif [[ "$1" == "ssh" && "$2" == "apitools" ]]; then
-        ssh vmadera@192.168.15.50
+        ssh vmadera@apidev.gelt.local 
+
+    elif [[ "$1" == "ssh" && "$2" == "apies" ]]; then
+        ssh vmadera@apies1.gelt.local
+
     elif [[ "$1" == "ssh" && "$2" == "back" ]]; then
-        ssh vmadera@192.168.11.12
+        ssh vmadera@backend.gelt.local
+
     elif [[ "$1" == "ssh" && "$2" == "backdev" ]]; then
-        ssh vmadera@192.168.14.12
-    elif [[ "$1" == "ssh" && "$2" == "apibr1" ]]; then
-        ssh vmadera@192.168.12.11
-    elif [[ "$1" == "ssh" && "$2" == "apibr2" ]]; then
-        ssh vmadera@192.168.13.51
-    elif [[ "$1" == "ssh" && "$2" == "apibr3" ]]; then
-        ssh vmadera@192.168.16.51
-    elif [[ "$1" == "ssh" && "$2" == "apiar1" ]]; then
-        ssh vmadera@192.168.13.11
-    elif [[ "$1" == "ssh" && "$2" == "apiar2" ]]; then
-        ssh vmadera@192.168.12.52
-    elif [[ "$1" == "ssh" && "$2" == "apiar3" ]]; then
-        ssh vmadera@192.168.16.52
-    elif [[ "$1" == "ssh" && "$2" == "apico1" ]]; then
-        ssh vmadera@192.168.11.3
-    elif [[ "$1" == "ssh" && "$2" == "apico2" ]]; then
-        ssh vmadera@192.168.12.3
-    elif [[ "$1" == "ssh" && "$2" == "apico3" ]]; then
-        ssh vmadera@192.168.13.3
-    elif [[ "$1" == "ssh" && "$2" == "apimx1" ]]; then
-        ssh vmadera@192.168.16.11
-    elif [[ "$1" == "ssh" && "$2" == "apimx2" ]]; then
-        ssh vmadera@192.168.12.53
-    elif [[ "$1" == "ssh" && "$2" == "apimx3" ]]; then
-        ssh vmadera@192.168.13.53
+        ssh vmadera@backenddev.gelt.local
+
+    elif [[ "$1" == "ssh" && "$2" == "apibr" ]]; then
+        ssh vmadera@apibr1.gelt.local
+
+    elif [[ "$1" == "ssh" && "$2" == "apiar" ]]; then
+        ssh vmadera@apiar1.gelt.local
+        
+    elif [[ "$1" == "ssh" && "$2" == "apico" ]]; then
+        ssh vmadera@apico1.gelt.local
+        
+    elif [[ "$1" == "ssh" && "$2" == "apimx" ]]; then
+        ssh vmadera@apimx1.gelt.local
+
+    elif [[ "$1" == "ssh" && "$2" == "etl" ]]; then
+        ssh vmadera@etl.gelt.local
+
+    elif [[ "$1" == "ssh" && "$2" == "g3p" ]]; then
+        ssh vmadera@g3papi.gelt.local
+    elif [[ "$1" == "ssh" && "$2" == "nginx" ]]; then
+        ssh vmadera@nginx.gelt.local
+
     else
         echo "Invalid, Command"
     fi

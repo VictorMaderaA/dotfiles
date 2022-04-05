@@ -22,7 +22,6 @@ function install {
 # install git
 # install htop
 # install nmap
-# install openvpn
 # install tmux
 install snapd
 install vim
@@ -35,3 +34,5 @@ install optipng
 # Fun stuff
 install figlet
 install lolcat
+
+#openvpn3

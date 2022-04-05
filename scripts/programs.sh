@@ -6,4 +6,5 @@ cd programs/
 ./vsc.sh
 ./vundle.sh
 ./bitwarden.sh
+./openvpn3
 
