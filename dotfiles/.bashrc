@@ -126,6 +126,7 @@ fi
 alias docker='sudo docker'
 alias docker-compose='sudo docker-compose'
 alias dr='docker-compose run --rm'
+alias dcu='docker-compose up'
 alias siteup='docker-compose up -d site'
 alias sitedown='docker-compose down'
 alias migrate='dr artisan db:wipe && dr artisan migrate:refresh'
