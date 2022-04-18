@@ -17,14 +17,14 @@ function install {
 install notion-snap
 install bitwarden
 install slack --classic
-install mailspring
+# install mailspring
 
 
 #Development
 install datagrip --classic
 install phpstorm --classic
 install webstorm --classic
-install insomnia
+# install insomnia
 install ngrok
 #install pycharm-community
 install pycharm-professional --classic
