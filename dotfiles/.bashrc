@@ -140,7 +140,7 @@ alias dockerstop='docker stop $(docker ps -a -q)'
 alias dopen='nautilus --browser $(pwd)'
 alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
 
-alias vpngelt='cd ~/openvpngelt/ && openvpn3 session-start --config client.ovpn'
+alias vpngelt='cd ~/openvpngelt/ && openvpn3 session-start --config gelt.ovpn'
 alias vpnclose='pgrep openvpn | xargs sudo kill -9'
 alias vpnstatus='openvpn3 sessions-list'
 
