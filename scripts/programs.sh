@@ -2,9 +2,9 @@
 
 cd programs/
 
-./docker.sh
+# ./docker.sh
 ./vsc.sh
-./vundle.sh
-./bitwarden.sh
+# ./vundle.sh
+# ./bitwarden.sh
 ./openvpn3
 

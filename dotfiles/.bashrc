@@ -123,7 +123,7 @@ fi
 
 
 # Aliases
-alias docker='sudo docker'
+# alias docker='sudo docker'
 alias docker-compose='sudo docker-compose'
 alias dr='docker-compose run --rm'
 alias dcu='docker-compose up'
@@ -135,68 +135,52 @@ alias data='migrate && seed'
 alias comp='dr composer install'
 alias commit='git add . && git commit'
 alias runtest='dr php vendor/bin/phpunit'
-alias dockerprune='docker image prune -a && docker container prune && docker volume prune && docker network prune && docker system prune'
+alias dockerprune='docker image prune -a -f && docker container prune -f && docker volume prune -f  && docker network prune -f  && docker system prune -f'
 alias dockerstop='docker stop $(docker ps -a -q)'
 alias dopen='nautilus --browser $(pwd)'
 alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
 
-alias vpngelt='cd ~/openvpngelt/ && openvpn3 session-start --config gelt.ovpn'
+#alias vpngelt='cd ~/openvpngelt/ && openvpn3 session-start --config gelt.ovpn'
 alias vpnclose='pgrep openvpn | xargs sudo kill -9'
 alias vpnstatus='openvpn3 sessions-list'
 
 alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
 
-
-vpn() {
-    if [ "$1" == "gelt" ]; then
-        vpngelt
-    else
-        echo "Invalid, try with: gelt"
-    fi
-}
-
-gelt() {
-    if [ "$1" == "vpn" ]; then
-        vpngelt
-    elif [[ "$1" == "ssh" && "$2" == "apidev" ]]; then
-        ssh vmadera@apidev.gelt.local 
-
-    elif [[ "$1" == "ssh" && "$2" == "apies" ]]; then
-        ssh vmadera@apies1.gelt.local
-
-    elif [[ "$1" == "ssh" && "$2" == "back" ]]; then
-        ssh vmadera@backend.gelt.local
-
-    elif [[ "$1" == "ssh" && "$2" == "backdev" ]]; then
-        ssh vmadera@backenddev.gelt.local
-
-    elif [[ "$1" == "ssh" && "$2" == "apibr" ]]; then
-        ssh vmadera@apibr1.gelt.local
-
-    elif [[ "$1" == "ssh" && "$2" == "apiar" ]]; then
-        ssh vmadera@apiar1.gelt.local
-        
-    elif [[ "$1" == "ssh" && "$2" == "apico" ]]; then
-        ssh vmadera@apico1.gelt.local
-        
-    elif [[ "$1" == "ssh" && "$2" == "apimx" ]]; then
-        ssh vmadera@apimx1.gelt.local
-
-    elif [[ "$1" == "ssh" && "$2" == "etl" ]]; then
-        ssh vmadera@etl.gelt.local
-
-    elif [[ "$1" == "ssh" && "$2" == "g3p" ]]; then
-        ssh vmadera@g3papi.gelt.local
-    elif [[ "$1" == "ssh" && "$2" == "nginx" ]]; then
-        ssh vmadera@nginx.gelt.local
-
-    else
-        echo "Invalid, Command"
-    fi
+# $1 = input file, $2 = output file (exa: video.mp4, audio.mp3)
+videotomp3() {
+    ffmpeg -i $1 -vn -acodec libmp3lame -ac 2 -qscale:a 4 -ar 48000 $2
 }
 
 
+gitsearch() {
+    git log -S $1 --source --all
+}
+
+
+alias sshdrop1='ssh root@165.232.122.217'
 
 dockerbash() {
     docker exec -it $1 /bin/bash
 }
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/home/develop/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/home/develop/anaconda3/etc/profile.d/conda.sh" ]; then
+        . "/home/develop/anaconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/home/develop/anaconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/home/develop/Downloads/google-cloud-sdk/path.bash.inc' ]; then . '/home/develop/Downloads/google-cloud-sdk/path.bash.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/home/develop/Downloads/google-cloud-sdk/completion.bash.inc' ]; then . '/home/develop/Downloads/google-cloud-sdk/completion.bash.inc'; fi
