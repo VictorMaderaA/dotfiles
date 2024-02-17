@@ -9,3 +9,6 @@ tar -C /opt -xzf nvim-linux64.tar.gz
 
 # Remove the tar file
 rm nvim-linux64.tar.gz
+
+# Delete tar file
+rm nvim-linux64.tar.gz
