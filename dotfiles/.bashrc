@@ -118,69 +118,24 @@ fi
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
+#  _____           _   ____        __             _ _   
+# | ____|_ __   __| | |  _ \  ___ / _| __ _ _   _| | |_ 
+# |  _| | '_ \ / _` | | | | |/ _ \ |_ / _` | | | | | __|
+# | |___| | | | (_| | | |_| |  __/  _| (_| | |_| | | |_ 
+# |_____|_| |_|\__,_| |____/ \___|_|  \__,_|\__,_|_|\__|
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
 
 
-# Aliases
-# alias docker='sudo docker'
-alias docker-compose='sudo docker-compose'
-alias dr='docker-compose run --rm'
-alias dcu='docker-compose up'
-alias siteup='docker-compose up -d site'
-alias sitedown='docker-compose down'
-alias migrate='dr artisan db:wipe && dr artisan migrate:refresh'
-alias seed='dr artisan db:seed'
-alias data='migrate && seed'
-alias comp='dr composer install'
-alias commit='git add . && git commit'
-alias runtest='dr php vendor/bin/phpunit'
-alias dockerprune='docker image prune -a -f && docker container prune -f && docker volume prune -f  && docker network prune -f  && docker system prune -f'
-alias dockerstop='docker stop $(docker ps -a -q)'
-alias dopen='nautilus --browser $(pwd)'
-alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
 
-#alias vpngelt='cd ~/openvpngelt/ && openvpn3 session-start --config gelt.ovpn'
-alias vpnclose='pgrep openvpn | xargs sudo kill -9'
-alias vpnstatus='openvpn3 sessions-list'
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
+#  _____           _      _       _     _                 
+# | ____|_ __   __| |    / \   __| | __| | ___  _ __  ___ 
+# |  _| | '_ \ / _` |   / _ \ / _` |/ _` |/ _ \| '_ \/ __|
+# | |___| | | | (_| |  / ___ \ (_| | (_| | (_) | | | \__ \
+# |_____|_| |_|\__,_| /_/   \_\__,_|\__,_|\___/|_| |_|___/
+                                                    
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
 
-alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
-
-# $1 = input file, $2 = output file (exa: video.mp4, audio.mp3)
-videotomp3() {
-    ffmpeg -i $1 -vn -acodec libmp3lame -ac 2 -qscale:a 4 -ar 48000 $2
-}
-
-
-gitsearch() {
-    git log -S $1 --source --all
-}
-
-
-alias sshdrop1='ssh root@165.232.122.217'
-
-dockerbash() {
-    docker exec -it $1 /bin/bash
-}
-
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/develop/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/home/develop/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/develop/anaconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="/home/develop/anaconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
-
-
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/home/develop/Downloads/google-cloud-sdk/path.bash.inc' ]; then . '/home/develop/Downloads/google-cloud-sdk/path.bash.inc'; fi
-
-# The next line enables shell command completion for gcloud.
-if [ -f '/home/develop/Downloads/google-cloud-sdk/completion.bash.inc' ]; then . '/home/develop/Downloads/google-cloud-sdk/completion.bash.inc'; fi
