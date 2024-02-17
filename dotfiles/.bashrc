@@ -56,11 +56,11 @@ if [ -n "$force_color_prompt" ]; then
     fi
 fi
 
-if [ "$color_prompt" = yes ]; then
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[38;5;8m\]\u@\D{%Y-%m-%d %H:%M:%S}\[$(tput sgr0)\] \[$(tput sgr0)\]\[\033[38;5;2m\]($(git branch 2>/dev/null | grep '^*' | colrm 1 2))\[$(tput sgr0)\]\[\033[38;5;6m\][\w]\[$(tput sgr0)\]\n\[$(tput sgr0)\]\[$(tput bold)\]\[\033[38;5;7m\]\W\[$(tput sgr0)\]: \[$(tput sgr0)\]'
-else
-    PS1='${debian_chroot:+($debian_chroot)}\u@\D{%Y-%m-%d %H:%M:%S}:\w\$ '
-fi
+# if [ "$color_prompt" = yes ]; then
+#     PS1='${debian_chroot:+($debian_chroot)}\[\033[38;5;8m\]\u@\D{%Y-%m-%d %H:%M:%S}\[$(tput sgr0)\] \[$(tput sgr0)\]\[\033[38;5;2m\]($(git branch 2>/dev/null | grep '^*' | colrm 1 2))\[$(tput sgr0)\]\[\033[38;5;6m\][\w]\[$(tput sgr0)\]\n\[$(tput sgr0)\]\[$(tput bold)\]\[\033[38;5;7m\]\W\[$(tput sgr0)\]: \[$(tput sgr0)\]'
+# else
+#     PS1='${debian_chroot:+($debian_chroot)}\u@\D{%Y-%m-%d %H:%M:%S}:\w\$ '
+# fi
 unset color_prompt force_color_prompt
 
 # If this is an xterm set the title to user@host:dir
@@ -126,6 +126,11 @@ fi
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
 
+if [ "$color_prompt" = yes ]; then
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[38;5;8m\]\u@\D{%Y-%m-%d %H:%M:%S}\[$(tput sgr0)\] \[$(tput sgr0)\]\[\033[38;5;2m\]($(git branch 2>/dev/null | grep '^*' | colrm 1 2))\[$(tput sgr0)\]\[\033[38;5;6m\][\w]\[$(tput sgr0)\]\n\[$(tput sgr0)\]\[$(tput bold)\]\[\033[38;5;7m\]\W\[$(tput sgr0)\]: \[$(tput sgr0)\]'
+else
+    PS1='${debian_chroot:+($debian_chroot)}\u@\D{%Y-%m-%d %H:%M:%S}:\w\$ '
+fi
 
 
 # ----------------------------------------------------------------
