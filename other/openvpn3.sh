@@ -1,9 +1,12 @@
 #!/bin/bash
 
+# https://openvpn.net/cloud-docs/owner/connectors/connector-user-guides/openvpn-3-client-for-linux.html
+
 # Añade el repositorio de OpenVPN 3
 echo "Añadiendo el repositorio de OpenVPN 3 Linux..."
-wget -qO - https://swupdate.openvpn.net/repos/openvpn-repo-pkg-key.pub | sudo apt-key add -
-echo "deb [arch=amd64] http://build.openvpn.net/debian/openvpn3/repos focal main" | sudo tee /etc/apt/sources.list.d/openvpn3.list
+sudo mkdir -p /etc/apt/keyrings && curl -fsSL https://packages.openvpn.net/packages-repo.gpg | sudo tee /etc/apt/keyrings/openvpn.asc
+DISTRO=$(lsb_release -c | awk '{print $2}')
+echo "deb [signed-by=/etc/apt/keyrings/openvpn.asc] https://packages.openvpn.net/openvpn3/debian $DISTRO main" | sudo tee /etc/apt/sources.list.d/openvpn-packages.list
 
 # Actualiza los paquetes e instala OpenVPN 3
 echo "Actualizando paquetes e instalando OpenVPN 3 Linux..."

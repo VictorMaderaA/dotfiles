@@ -14,3 +14,6 @@ figlol "Installing Whissper"
 
 figlol "Installing wrk"
 ./wrk.sh
+
+figlol "Installing Wine"
+./wine.sh
