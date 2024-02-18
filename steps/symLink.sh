@@ -28,7 +28,7 @@ function linkDotfile {
   echo "Creating new symlink: ${dest}"
   ln -s ${dotfilesDir}/${1} ${dest}
 
-  figlet "Linked: ${1}" | lolcat
+  figlet "__________"
 }
 
 linkDotfile .bash_aliases

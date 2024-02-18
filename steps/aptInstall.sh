@@ -6,7 +6,7 @@ function install {
   if [ $? -ne 0 ]; then
     echo "Installing: ${1}..."
     sudo apt install -y $1 > /dev/null
-    figlet "Installed: ${1}" | lolcat
+    figlet "__________"
   else
     echo "Already installed: ${1}"
   fi
@@ -19,7 +19,6 @@ install tmux # terminal multiplexer
 install nmap # network scanner
 install vim # text editor
 install neovim # text editor
-install exfat-utils # exfat file system support
 install tree # list directory contents
 install file # file type identification
 install gimp # image editor

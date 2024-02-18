@@ -27,7 +27,7 @@ fi
 # Compila wrk
 echo "Compilando wrk..."
 cd "$TEMP_DIR"
-make
+make > /dev/null
 if [ $? -ne 0 ]; then
     echo "Error compilando wrk."
     exit 1

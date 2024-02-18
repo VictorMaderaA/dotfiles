@@ -6,14 +6,17 @@ function figlol() {
 
 cd ./other
 
-figlol "Installing OpenVPN"
+figlol "OpenVPN"
 ./openvpn3.sh
 
-figlol "Installing Whissper"
-./whissper.sh
+figlol "Whissper"
+./whisper.sh
 
-figlol "Installing wrk"
+figlol "wrk"
 ./wrk.sh
 
-figlol "Installing Wine"
+figlol "Wine"
 ./wine.sh
+
+figlol "Tor"
+./tor.sh

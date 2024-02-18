@@ -9,6 +9,8 @@ PYTHON_VERSION="3.9.7"
 # Verifica si pyenv está instalado
 if ! command -v pyenv &> /dev/null; then
     echo "pyenv no está instalado. Por favor, instálalo antes de ejecutar este guion."
+    #Imprime un mensaje de error y termina el script
+    figlet "ERROR"
     exit 1
 else
     echo "pyenv encontrado."

@@ -36,5 +36,3 @@ fi
 # 3 Add default user to docker group
 echo "-- Adding user to docker group -- $USER"
 sudo usermod -aG docker $USER
-
-figlet "Docker Installed" | lolcat
