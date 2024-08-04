@@ -22,7 +22,7 @@ sudo apt-get update -y
 
 # 2 Install Docker Engine
 echo "-- Install Docker Engine --"
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
 # https://docs.docker.com/engine/install/linux-postinstall/
 # 3 Create the docker group if it does not exist

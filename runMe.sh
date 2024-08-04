@@ -50,8 +50,8 @@ figlol "NodeVM"
 # |  __/| |_| | |_| | | | (_) | | | |
 # |_|    \__, |\__|_| |_|\___/|_| |_|
 #        |___/                       
-figlol "Python"
-./steps/python.sh
+# figlol "Python"
+# ./steps/python.sh
 
 #  ____             _             
 # |  _ \  ___   ___| | _____ _ __ 
