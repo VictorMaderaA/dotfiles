@@ -1,52 +1,72 @@
 #!/bin/bash
 
-
 # Verifica si pyenv está instalado
-if ! command -v pyenv &> /dev/null; then
-    echo "pyenv no está instalado."
-else
-    echo "pyenv encontrado."
+if command -v pyenv &> /dev/null; then
+    echo "pyenv ya está instalado."
     exit 0
+else
+    echo "pyenv no está instalado."
 fi
 
 # Actualiza la lista de paquetes e instala dependencias necesarias para compilar Python
+echo "Actualizando lista de paquetes e instalando dependencias..."
+sudo apt-get update -y
 sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
   libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
   libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev git
 
 # Instala pyenv
-curl https://pyenv.run | bash
+echo "Instalando pyenv..."
+curl -fsSL https://pyenv.run | bash
 
 # Configura el entorno para pyenv y pyenv-virtualenv
-# Verifica si ya existe la configuración en el archivo .bashrc
+echo "Configurando pyenv en el archivo .bashrc..."
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv virtualenv-init -)"
+
+# Verifica si la configuración de pyenv ya existe en el archivo .bashrc
 if grep -q "pyenv" ~/.bashrc; then
     echo "La configuración de pyenv ya existe en el archivo .bashrc."
 else
-    echo "Configurando pyenv en el archivo .bashrc..."
+    echo "Añadiendo configuración de pyenv al archivo .bashrc..."
     echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
     echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
     echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 fi
 
-# Reinicia la shell
-exec "$SHELL"
+# Recarga el entorno
+source ~/.bashrc
 
 # Instala pyenv-virtualenv como un plugin de pyenv
-git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
+echo "Instalando pyenv-virtualenv..."
+git clone https://github.com/pyenv/pyenv-virtualenv.git "$(pyenv root)/plugins/pyenv-virtualenv"
 
-# Reinicia la shell nuevamente para aplicar los cambios
-exec "$SHELL"
+# Verifica la instalación de pyenv y pyenv-virtualenv
+if command -v pyenv &> /dev/null && [ -d "$(pyenv root)/plugins/pyenv-virtualenv" ]; then
+    echo "pyenv y pyenv-virtualenv han sido instalados correctamente."
+else
+    echo "Hubo un problema instalando pyenv o pyenv-virtualenv. Por favor, verifica manualmente."
+    exit 1
+fi
 
-# Instala una versión específica de Python usando pyenv
-# pyenv install 3.10.0
+# Identificar la versión LTS de Python (última versión LTS en el momento de escribir este script)
+LTS_VERSION="3.10.12"
 
-# Crea un entorno virtual para la versión instalada
-# pyenv virtualenv 3.10 my-virtual-env-3.8.10
+# Verifica si la versión LTS está instalada
+if pyenv versions --bare | grep -q "$LTS_VERSION"; then
+    echo "La versión LTS de Python $LTS_VERSION ya está instalada."
+else
+    echo "Instalando la versión LTS de Python $LTS_VERSION..."
+    pyenv install $LTS_VERSION
+fi
 
-# Activar el entorno virtual
-# Nota: Para activar el entorno virtual, deberás ejecutar este comando manualmente después de la instalación,
-# ya que este script no puede cambiar el entorno de la shell actual.
-# echo "Para activar el entorno virtual, ejecuta: pyenv activate my-virtual-env-3.8.10"
+# Establecer la versión LTS como la versión global de Python
+pyenv global $LTS_VERSION
+echo "La versión LTS de Python $LTS_VERSION ha sido configurada como la versión global."
 
-# Nota sobre la desactivación del entorno virtual
-# echo "Para desactivar el entorno virtual, usa: pyenv deactivate"
+# Mostrar instrucciones adicionales
+figlol "Instalación Completa"
+echo "Para verificar la versión actual de Python en uso, ejecuta: python --version"
+echo "Para cambiar la versión global de Python, usa: pyenv global <version>"
+echo "Para listar las versiones de Python instaladas, usa: pyenv versions"

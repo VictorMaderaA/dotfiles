@@ -1,29 +1,47 @@
 #!/bin/bash
 
-function install {
-  which $1 &> /dev/null
-
-  if [ $? -ne 0 ]; then
-    echo "Installing: ${1}..."
-    sudo apt install -y $1 > /dev/null
-    figlet "__________"
+# Función para instalar paquetes
+install() {
+  package=$1
+  # Verifica si el paquete está instalado
+  if ! which $package &> /dev/null; then
+    echo "Instalando: ${package}..."
+    # Intenta instalar el paquete
+    if sudo apt install -y $package > /dev/null; then
+      echo "Instalación completada: ${package}"
+      figlet "__________"
+    else
+      echo "Error al instalar: ${package}"
+    fi
   else
-    echo "Already installed: ${1}"
+    echo "Ya está instalado: ${package}"
   fi
 }
 
-install git # version control
-install curl # transfer data from or to a server
-install htop # system monitor
-install tmux # terminal multiplexer
-install nmap # network scanner
-install vim # text editor
-install neovim # text editor
-install tree # list directory contents
-install file # file type identification
-install gimp # image editor
-install jpegoptim # image optimization
-install optipng # image optimization
-install chromium-browser # web browser
-install awscli # amazon web services cli
-install neofetch # displays system info
+# Lista de paquetes a instalar
+packages=(
+  git          # control de versiones
+  curl         # transferencia de datos de o a un servidor
+  htop         # monitor del sistema
+  tmux         # multiplexor de terminal
+  nmap         # escáner de red
+  vim          # editor de texto
+  neovim       # editor de texto
+  tree         # listar contenidos del directorio
+  file         # identificación del tipo de archivo
+  gimp         # editor de imágenes
+  jpegoptim    # optimización de imágenes
+  optipng      # optimización de imágenes
+  chromium-browser # navegador web
+  awscli       # CLI de servicios web de amazon
+  neofetch     # muestra información del sistema
+)
+
+echo "Iniciando la instalación de paquetes..."
+
+# Instalación de todos los paquetes
+for package in "${packages[@]}"; do
+  install $package
+done
+
+echo "Instalación de todos los paquetes completada."

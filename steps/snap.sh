@@ -1,18 +1,30 @@
 #!/bin/bash
 
-sudo apt-get install -y snapd
+# Instala snapd si no está instalado
+if ! command -v snap &> /dev/null; then
+    echo "Instalando snapd..."
+    sudo apt-get install -y snapd
+else
+    echo "Snapd ya está instalado."
+fi
 
+# Actualiza snap y sus paquetes
+echo "Actualizando snap y sus paquetes..."
 sudo snap refresh --list
 sudo snap refresh
 
+# Función para instalar paquetes usando snap
 function install {
-  which $1 &> /dev/null
-
-  if [ $? -ne 0 ]; then
-    echo "Installing: ${1}..."
-    sudo snap install $1 $2
+  # Verifica si el paquete está instalado
+  if ! snap list | grep -q "^$1 "; then
+    echo "Instalando: ${1}..."
+    if [ -n "$2" ]; then
+      sudo snap install $1 $2
+    else
+      sudo snap install $1
+    fi
   else
-    echo "Already installed: ${1}"
+    echo "Ya está instalado: ${1}"
   fi
 }
 
@@ -22,20 +34,20 @@ install phpstorm --classic
 install datagrip --classic
 install pycharm-professional --classic
 
-# Entreteinment
+# Entretenimiento
 install spotify
 install vlc
 install obs-studio
 install plexmediaserver
 install snap-store
 
-# Development
+# Desarrollo
 install insomnia
 install postman
 install ngrok
 install notepad-plus-plus
 
-# Utilities
+# Utilidades
 install libreoffice
 install bw # bitwarden cli
 install doctl # digital ocean cli
@@ -45,15 +57,17 @@ install bitwarden
 install audacity
 install gnome-system-monitor
 
-# Communication
+# Comunicación
 install slack --classic
 install discord
 install telegram-desktop
 
-# Browsers
+# Navegadores
 install chromium
 install firefox
 install brave
 
-# Games
+# Juegos
 install steam
+
+echo "Proceso de instalación completado."
