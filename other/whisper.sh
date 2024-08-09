@@ -4,7 +4,7 @@
 ENV_NAME="whisper-env"
 
 # Versión de Python para el entorno virtual
-PYTHON_VERSION="3.9.7"
+PYTHON_VERSION="3.10.12"
 
 # Verifica si pyenv está instalado
 if ! command -v pyenv &> /dev/null; then

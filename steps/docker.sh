@@ -51,11 +51,11 @@ sudo usermod -aG docker $USER
 echo "La instalación de Docker se ha completado."
 
 # Aplicar cambios en la sesión actual
-if [ "$(id -gn)" != "docker" ]; then
-  echo "Aplicando cambios del grupo en la sesión actual..."
-  exec sg docker newgrp $(id -gn) "$SHELL"
-else
-  echo "El usuario ya pertenece al grupo docker."
-fi
+#if [ "$(id -gn)" != "docker" ]; then
+#  echo "Aplicando cambios del grupo en la sesión actual..."
+#  exec sg docker newgrp $(id -gn) "$SHELL"
+#else
+#  echo "El usuario ya pertenece al grupo docker."
+#fi
 
 echo "Docker está instalado y el usuario está en el grupo docker."

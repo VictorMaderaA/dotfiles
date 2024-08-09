@@ -28,11 +28,14 @@ function install {
   fi
 }
 
-# IDEs
-install webstorm --classic
-install phpstorm --classic
-install datagrip --classic
-install pycharm-professional --classic
+
+# Navegadores
+install chromium
+install firefox
+install brave
+
+# Juegos
+install steam
 
 # Entretenimiento
 install spotify
@@ -40,6 +43,13 @@ install vlc
 install obs-studio
 install plexmediaserver
 install snap-store
+
+# IDEs
+install webstorm --classic
+install phpstorm --classic
+install datagrip --classic
+install pycharm-professional --classic
+
 
 # Desarrollo
 install insomnia
@@ -62,12 +72,5 @@ install slack --classic
 install discord
 install telegram-desktop
 
-# Navegadores
-install chromium
-install firefox
-install brave
-
-# Juegos
-install steam
 
 echo "Proceso de instalación completado."
