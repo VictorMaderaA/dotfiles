@@ -76,30 +76,30 @@ source "$ENVIRONMENTS_DIR/env.conf"
 
 check_prerequisites() {
     log_section "Verificando requisitos previos"
-    
+
     # Verificar que somos Linux
     if [[ ! "$OSTYPE" =~ "linux" ]]; then
         log_error "Este script solo funciona en Linux"
         exit 1
     fi
-    
+
     # Verificar git
     if ! command -v git &> /dev/null; then
         log_error "Git no está instalado"
         exit 1
     fi
-    
+
     log_success "Requisitos cumplidos"
 }
 
 detect_env() {
     log_section "Detectando entorno"
-    
+
     if ! detect_environment; then
         log_error "Error detectando entorno"
         exit 1
     fi
-    
+
     # Permitir override manual
     if [[ -n "$FORCE_ENV" ]]; then
         log_warn "Entorno forzado a: $FORCE_ENV"
@@ -125,7 +125,7 @@ detect_env() {
                 ;;
         esac
     fi
-    
+
     show_environment_info
 }
 
@@ -138,7 +138,7 @@ install_base_packages() {
     for pkg in "${packages[@]}"; do
         pkg_install_if_needed "$pkg"
     done
-    
+
     log_success "Paquetes base instalados"
 }
 
@@ -151,13 +151,13 @@ install_shell_tools() {
     for pkg in "${packages[@]}"; do
         pkg_install_if_needed "$pkg"
     done
-    
+
     # Instalar starship (cross-platform prompt)
     if ! command -v starship &> /dev/null; then
         log_info "Instalando starship..."
         curl -sS https://starship.rs/install.sh | sh -s -- -y
     fi
-    
+
     log_success "Herramientas de shell instaladas"
 }
 
@@ -172,36 +172,36 @@ install_development_tools() {
     done
 
     install_bitwarden_cli
-    
+
     log_success "Herramientas de desarrollo instaladas"
 }
 
 install_docker() {
     log_section "Instalando Docker"
-    
+
     # Saltear si estamos en WSL (Docker Desktop se instala en Windows)
     if [[ "$IS_WSL" == true ]]; then
         log_warn "WSL detectado - saltando Docker (instala Docker Desktop en Windows)"
         return 0
     fi
-    
+
     if ! command -v docker &> /dev/null; then
         log_info "Instalando Docker..."
         curl -fsSL https://get.docker.com -o get-docker.sh
         sudo sh get-docker.sh
         rm get-docker.sh
-        
+
         # Añadir usuario al grupo docker
         sudo usermod -aG docker "$(whoami)"
         log_warn "Usuario añadido al grupo docker - reinicia sesión o usa: newgrp docker"
     fi
-    
+
     if ! command -v docker-compose &> /dev/null; then
         log_info "Instalando Docker Compose..."
         sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
     fi
-    
+
     log_success "Docker instalado"
 }
 
@@ -225,7 +225,7 @@ install_desktop_apps() {
 
 install_server_tools() {
     log_section "Instalando herramientas de servidor"
-    
+
     if ! is_server; then
         log_warn "Server no detectado - saltando herramientas de servidor"
         return 0
@@ -237,7 +237,7 @@ install_server_tools() {
     for pkg in "${packages[@]}"; do
         pkg_install_if_needed "$pkg"
     done
-    
+
     log_success "Herramientas de servidor instaladas"
 }
 
@@ -271,13 +271,53 @@ install_bitwarden_cli() {
     fi
 }
 
+install_jetbrains_toolbox() {
+    log_section "Instalando JetBrains Toolbox"
+
+    if ! is_desktop; then
+        log_warn "Desktop no detectado - saltando JetBrains Toolbox"
+        return 0
+    fi
+
+    local INSTALL_DIR="$HOME/.local/share/JetBrains/Toolbox"
+    local SYMLINK_DIR="$HOME/.local/bin"
+    local TOOLBOX_BIN="$INSTALL_DIR/bin/jetbrains-toolbox"
+    local TOOLBOX_SYMLINK="$SYMLINK_DIR/jetbrains-toolbox"
+
+    # Verificar si ya está instalado correctamente
+    if [[ -f "$TOOLBOX_BIN" && -x "$TOOLBOX_BIN" ]] && [[ -L "$TOOLBOX_SYMLINK" ]]; then
+        log_info "JetBrains Toolbox ya está instalado"
+        return 0
+    fi
+
+    # Instalar dependencias
+    local deps=("libfuse2" "libxi6" "libxrender1" "libxtst6" "mesa-utils" "libfontconfig" "libgtk-3-bin")
+    for dep in "${deps[@]}"; do
+        pkg_install_if_needed "$dep"
+    done
+
+    log_info "Instalando JetBrains Toolbox..."
+
+    export CI=1
+
+    if curl -fsSL https://raw.githubusercontent.com/nagygergo/jetbrains-toolbox-install/master/jetbrains-toolbox.sh | bash; then
+        log_success "JetBrains Toolbox instalado correctamente"
+        unset CI
+    else
+        log_error "Error instalando JetBrains Toolbox"
+        unset CI
+        return 1
+    fi
+}
+
+
 link_dotfiles() {
     log_section "Creando symlinks de dotfiles"
-    
+
     if [[ "$NO_BACKUP" != "1" ]]; then
         init_backup_dir
     fi
-    
+
     # Función auxiliar para crear symlink
     link_dotfile() {
         local source=$1
@@ -331,66 +371,66 @@ link_dotfiles() {
     link_dotfile "shell/.bashrc" ".bashrc"
     link_dotfile "shell/.profile" ".profile"
     link_dotfile "shell/aliases/" ".aliases/"
-    
+
     # Symlinks de git
     link_dotfile "git/.gitconfig" ".gitconfig"
     link_dotfile "git/.gitignore_global" ".gitignore_global"
     link_dotfile "git/gitConfig/" ".gitConfig/"
-    
+
     # Symlinks de SSH (si existen)
     if [[ -f "$DOTFILES_DIR/ssh/config" ]]; then
         mkdir -p "$HOME/.ssh"
         link_dotfile "ssh/config" ".ssh/config"
         chmod 600 "$HOME/.ssh/config"
     fi
-    
+
     # Symlinks de editors
     link_dotfile "editors/.vimrc" ".vimrc"
     link_dotfile "editors/.editorconfig" ".editorconfig"
-    
+
     # Symlinks de tools
     link_dotfile "tools/.tmux.conf" ".tmux.conf"
     link_dotfile "tools/.inputrc" ".inputrc"
-    
+
     log_success "Symlinks de dotfiles creados"
 }
 
 configure_shell() {
     log_section "Configurando shell"
-    
+
     # Cambiar shell a zsh si no es el actual
     if [[ "$SHELL" != "$(which zsh)" ]]; then
         log_info "Cambiando shell a zsh..."
         chsh -s "$(which zsh)"
         log_warn "Shell cambió - necesitarás reiniciar la sesión"
     fi
-    
+
     log_success "Shell configurado"
 }
 
 run_post_install() {
     log_section "Ejecutando hooks post-instalación"
-    
+
     if [[ -f "$SCRIPT_DIR/scripts/hooks/post-install.sh" ]]; then
         bash "$SCRIPT_DIR/scripts/hooks/post-install.sh"
     fi
-    
+
     log_success "Hooks post-instalación ejecutados"
 }
 
 validate_installation() {
     log_section "Validando instalación"
-    
+
     # Validar symlinks
     [[ -L "$HOME/.zshrc" ]] && log_success ".zshrc symlink OK" || log_warn ".zshrc no está linkedado"
     [[ -L "$HOME/.gitconfig" ]] && log_success ".gitconfig symlink OK" || log_warn ".gitconfig no está linkedado"
     [[ -L "$HOME/.tmux.conf" ]] && log_success ".tmux.conf symlink OK" || log_warn ".tmux.conf no está linkedado"
-    
+
     # Validar comandos importantes
     command -v git &> /dev/null && log_success "Git: OK" || log_warn "Git: NO encontrado"
     command -v zsh &> /dev/null && log_success "Zsh: OK" || log_warn "Zsh: NO encontrado"
     command -v curl &> /dev/null && log_success "Curl: OK" || log_warn "Curl: NO encontrado"
-    
+
     if is_desktop; then
         log_info "Ambiente Desktop detectado"
     elif is_server; then
@@ -406,7 +446,7 @@ validate_installation() {
 
 main() {
     clear
-    
+
     echo -e "${CYAN}"
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║         INSTALADOR DE DOTFILES - VICTOR MADERA              ║"
@@ -414,29 +454,30 @@ main() {
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     echo ""
-    
+
     check_prerequisites
     detect_env
 
     detect_package_manager
     pkg_update
-    
+
     # Instalar en orden
     install_base_packages
     install_shell_tools
     install_development_tools
+    install_jetbrains_toolbox  # ← Añade esta línea
     install_docker
     install_desktop_apps
     install_server_tools
-    
+
     # Configurar
     link_dotfiles
     configure_shell
     run_post_install
-    
+
     # Validar
     validate_installation
-    
+
     # Resumen final
     log_section "¡Instalación Completada!"
     echo -e "${GREEN}"
