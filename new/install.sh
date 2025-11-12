@@ -63,6 +63,7 @@ export VERBOSE DEBUG NO_BACKUP
 
 source "$SCRIPT_DIR/scripts/lib/logging.sh"
 source "$SCRIPT_DIR/scripts/lib/detect_environment.sh"
+source "$SCRIPT_DIR/scripts/lib/keyboard_shortcuts.sh"
 source "$SCRIPT_DIR/scripts/lib/package_manager.sh"
 source "$SCRIPT_DIR/scripts/lib/backup.sh"
 source "$SCRIPT_DIR/scripts/lib/utils.sh"
@@ -224,6 +225,8 @@ install_desktop_apps() {
     for pkg in "${packages[@]}"; do
         pkg_install_if_needed "$pkg"
     done
+
+    configure_keyboard_shortcuts
 
     log_success "Aplicaciones de escritorio instaladas"
 }
@@ -599,6 +602,19 @@ run_post_install() {
     log_success "Hooks post-instalación ejecutados"
 }
 
+validate_keyboard_shortcuts() {
+    log_section "Validando atajos de teclado"
+
+    # Verificar si hay atajos personalizados configurados
+    local shortcuts=$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings 2>/dev/null)
+
+    if [[ "$shortcuts" != "[]" ]]; then
+        log_success "Atajos personalizados configurados: $shortcuts"
+    else
+        log_warn "No se encontraron atajos personalizados"
+    fi
+}
+
 validate_installation() {
     log_section "Validando instalación"
 
@@ -611,6 +627,8 @@ validate_installation() {
     command -v git &> /dev/null && log_success "Git: OK" || log_warn "Git: NO encontrado"
     command -v zsh &> /dev/null && log_success "Zsh: OK" || log_warn "Zsh: NO encontrado"
     command -v curl &> /dev/null && log_success "Curl: OK" || log_warn "Curl: NO encontrado"
+
+    validate_keyboard_shortcuts
 
     if is_desktop; then
         log_info "Ambiente Desktop detectado"
