@@ -1,0 +1,26 @@
+[user]
+    name = "VictorMaderaA"
+    email = "victor.madera.a@gmail.com"
+    # No poner useConfigOnly aquí si quieres que este sea el global por defecto
+
+[core]
+    editor = vim
+    excludesFile = ~/.gitignore_global
+	autocrlf = true
+
+[alias]
+    st = status
+    s = status
+    co = checkout
+    br = branch
+    ci = commit
+    c = commit
+    lg = log --oneline --graph --all
+    a = add
+
+[init]
+    defaultBranch = main
+
+# Config para repos en ~/narobial
+[includeIf "gitdir:~/narobial/"]
+    path = ~/.gitconfigs/gitconfig_narobial
