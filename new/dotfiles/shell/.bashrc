@@ -115,3 +115,20 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
+
+# ============================================================================
+# Load custom configurations from ~/.bashrc.d/
+# ============================================================================
+
+BASHRC_D_DIR="$HOME/.bashrc.d"
+
+if [[ -d "$BASHRC_D_DIR" ]]; then
+    for config_file in "$BASHRC_D_DIR"/*.sh; do
+        if [[ -f "$config_file" ]]; then
+            source "$config_file"
+        fi
+    done
+    unset config_file
+fi
+
+unset BASHRC_D_DIR
