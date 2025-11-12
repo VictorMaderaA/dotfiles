@@ -17,6 +17,7 @@
     c = commit
     lg = log --oneline --graph --all
     a = add
+    p = push
 
 [init]
     defaultBranch = main
