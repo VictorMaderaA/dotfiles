@@ -139,6 +139,8 @@ install_base_packages() {
         pkg_install_if_needed "$pkg"
     done
 
+    install_tailscale
+
     log_success "Paquetes base instalados"
 }
 
@@ -352,7 +354,22 @@ install_pyenv() {
     fi
 }
 
+install_tailscale() {
+    log_section "Instalando Tailscale"
 
+    if command -v tailscale &> /dev/null; then
+        log_info "Tailscale ya está instalado"
+        return 0
+    fi
+
+    log_info "Descargando e instalando Tailscale..."
+    if curl -fsSL https://tailscale.com/install.sh | sh; then
+        log_success "Tailscale instalado correctamente"
+    else
+        log_error "Error instalando Tailscale"
+        return 1
+    fi
+}
 
 link_dotfiles() {
     log_section "Creando symlinks de dotfiles"
