@@ -1,0 +1,28 @@
+Host hetzner-mercury
+	HostName FILL_ME_IN
+	User root
+	IdentityFile ~/.ssh/VictorMaderaA
+
+Host qdevwebaws
+	HostName qdevwebaws.quiter.com
+	User rootquiter
+	IdentityFile ~/.ssh/victor.madera@narobial
+
+Host qdevweb.intraquiter
+        HostName qdevweb.intraquiter
+        User root
+	IdentityFile ~/.ssh/victor.madera@qdevweb
+
+Host devweb.quiter.com
+        HostName devweb.quiter.com
+        User root
+	IdentityFile ~/.ssh/victor.madera@qdevweb
+
+Host git-codecommit.*.amazonaws.com
+    User APKAQNWN7W2VZQTLNWOX
+    IdentityFile ~/.ssh/narobial_aws
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+
+Host *
+	IdentityFile ~/.ssh/VictorMaderaA
