@@ -528,14 +528,14 @@ configure_shell() {
 configure_gnome_terminal() {
     log_section "Configurando GNOME Terminal para usar zsh"
 
-    # Solo aplicar si estamos en desktop y GNOME Terminal está disponible
+    # Solo aplicar si estamos en desktop
     if ! is_desktop; then
         log_warn "Desktop no detectado - saltando configuración de GNOME Terminal"
         return 0
     fi
 
     if ! command -v gsettings &> /dev/null; then
-        log_warn "gsettings no disponible - terminal podría no configurarse automáticamente"
+        log_warn "gsettings no disponible - saltando configuración de GNOME Terminal"
         return 0
     fi
 
@@ -549,25 +549,37 @@ configure_gnome_terminal() {
 
     local PROFILE_PATH="org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$PROFILE_ID/"
 
-    log_info "Perfil de GNOME Terminal ID: $PROFILE_ID"
+    log_info "Configurando perfil de GNOME Terminal: $PROFILE_ID"
 
-    # OPCIÓN 1: Desactivar custom-command (usa /etc/passwd)
-    # Esto es lo más limpio y es lo que queremos
-    log_info "Configurando GNOME Terminal para respetar /etc/passwd..."
-    if gsettings set "$PROFILE_PATH" use-custom-command false 2>&1; then
-        log_success "GNOME Terminal configurado (use-custom-command: false)"
+    # SOLUCIÓN CORRECTA: Forzar custom-command en true
+    # Esto funciona en todas las versiones recientes de GNOME Terminal
+    log_info "Estableciendo custom-command a '/usr/bin/zsh -l'..."
+
+    if gsettings set "$PROFILE_PATH" custom-command "/usr/bin/zsh -l" 2>&1; then
+        log_debug "custom-command establecido"
     else
-        log_warn "No se pudo configurar GNOME Terminal vía gsettings"
+        log_warn "No se pudo establecer custom-command"
+        return 1
     fi
 
-    # OPCIÓN 2: Si algo falla, también crear ~/.bash_profile como fallback
+    if gsettings set "$PROFILE_PATH" use-custom-command true 2>&1; then
+        log_success "GNOME Terminal configurado para usar zsh"
+    else
+        log_warn "No se pudo activar use-custom-command"
+        return 1
+    fi
+
+    # Fallback: Crear ~/.bash_profile para compatibilidad con otros terminales
     if [[ ! -f "$HOME/.bash_profile" ]]; then
-        log_info "Creando ~/.bash_profile como fallback..."
+        log_info "Creando ~/.bash_profile como fallback para otros terminales..."
         cat > "$HOME/.bash_profile" << 'EOF'
-# ~/.bash_profile - Iniciar sesión con zsh
-if [[ -x /usr/bin/zsh ]] || [[ -x /bin/zsh ]]; then
-    export SHELL=$(which zsh)
-    exec $(which zsh) -l
+# ~/.bash_profile - Fallback para terminales que respetan /etc/passwd
+# Si no estamos en una terminal de GNOME, esto redirige a zsh
+if [[ -z "$GNOME_TERMINAL_SERVICE" ]]; then
+    if [[ -x /usr/bin/zsh ]] || [[ -x /bin/zsh ]]; then
+        export SHELL=$(which zsh)
+        exec $(which zsh) -l
+    fi
 fi
 EOF
         chmod 644 "$HOME/.bash_profile"
