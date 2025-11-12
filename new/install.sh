@@ -492,14 +492,89 @@ link_dotfiles() {
 configure_shell() {
     log_section "Configurando shell"
 
-    # Cambiar shell a zsh si no es el actual
-    if [[ "$SHELL" != "$(which zsh)" ]]; then
+    local ZSH_PATH=$(which zsh)
+
+    if [[ -z "$ZSH_PATH" ]]; then
+        log_error "zsh no está instalado"
+        return 1
+    fi
+
+    log_info "Ruta de zsh: $ZSH_PATH"
+
+    # Cambiar shell a zsh
+    local CURRENT_SHELL=$(grep "^$(whoami):" /etc/passwd | cut -d: -f7)
+
+    if [[ "$CURRENT_SHELL" != "$ZSH_PATH" ]]; then
         log_info "Cambiando shell a zsh..."
-        chsh -s "$(which zsh)"
-        log_warn "Shell cambió - necesitarás reiniciar la sesión"
+
+        if sudo chsh -s "$ZSH_PATH" "$(whoami)"; then
+            if grep -q "$(whoami).*zsh" /etc/passwd; then
+                log_success "Shell cambiado a zsh en /etc/passwd"
+            else
+                log_error "No se pudo verificar el cambio"
+                return 1
+            fi
+        else
+            log_error "Error ejecutando chsh"
+            return 1
+        fi
+    else
+        log_success "zsh ya es el shell por defecto"
     fi
 
     log_success "Shell configurado"
+}
+
+configure_gnome_terminal() {
+    log_section "Configurando GNOME Terminal para usar zsh"
+
+    # Solo aplicar si estamos en desktop y GNOME Terminal está disponible
+    if ! is_desktop; then
+        log_warn "Desktop no detectado - saltando configuración de GNOME Terminal"
+        return 0
+    fi
+
+    if ! command -v gsettings &> /dev/null; then
+        log_warn "gsettings no disponible - terminal podría no configurarse automáticamente"
+        return 0
+    fi
+
+    # Obtener el ID del perfil por defecto
+    local PROFILE_ID=$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'" )
+
+    if [[ -z "$PROFILE_ID" ]]; then
+        log_warn "No se pudo obtener el ID del perfil de GNOME Terminal"
+        return 0
+    fi
+
+    local PROFILE_PATH="org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$PROFILE_ID/"
+
+    log_info "Perfil de GNOME Terminal ID: $PROFILE_ID"
+
+    # OPCIÓN 1: Desactivar custom-command (usa /etc/passwd)
+    # Esto es lo más limpio y es lo que queremos
+    log_info "Configurando GNOME Terminal para respetar /etc/passwd..."
+    if gsettings set "$PROFILE_PATH" use-custom-command false 2>&1; then
+        log_success "GNOME Terminal configurado (use-custom-command: false)"
+    else
+        log_warn "No se pudo configurar GNOME Terminal vía gsettings"
+    fi
+
+    # OPCIÓN 2: Si algo falla, también crear ~/.bash_profile como fallback
+    if [[ ! -f "$HOME/.bash_profile" ]]; then
+        log_info "Creando ~/.bash_profile como fallback..."
+        cat > "$HOME/.bash_profile" << 'EOF'
+# ~/.bash_profile - Iniciar sesión con zsh
+if [[ -x /usr/bin/zsh ]] || [[ -x /bin/zsh ]]; then
+    export SHELL=$(which zsh)
+    exec $(which zsh) -l
+fi
+EOF
+        chmod 644 "$HOME/.bash_profile"
+        log_success "~/.bash_profile creado"
+    fi
+
+    log_success "Configuración de GNOME Terminal completada"
 }
 
 run_post_install() {
@@ -559,7 +634,7 @@ main() {
     install_base_packages
     install_shell_tools
     install_development_tools
-    install_jetbrains_toolbox  # ← Añade esta línea
+    install_jetbrains_toolbox
     install_docker
     install_desktop_apps
     install_server_tools
@@ -567,6 +642,7 @@ main() {
     # Configurar
     link_dotfiles
     configure_shell
+    configure_gnome_terminal
     run_post_install
 
     # Validar
