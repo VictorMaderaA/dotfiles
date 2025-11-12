@@ -176,6 +176,7 @@ install_development_tools() {
     install_bitwarden_cli
     install_nvm
     install_pyenv
+    install_aws_cli
 
     log_success "Herramientas de desarrollo instaladas"
 }
@@ -371,6 +372,35 @@ install_tailscale() {
     fi
 }
 
+install_aws_cli() {
+    log_section "Instalando AWS CLI"
+
+    if command -v aws &> /dev/null; then
+        log_info "AWS CLI ya está instalado"
+        return 0
+    fi
+
+    log_info "Descargando e instalando AWS CLI..."
+
+    # Directorio temporal
+    local TMP_DIR=$(mktemp -d)
+    local AWS_CLI_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+    local AWS_CLI_ZIP="$TMP_DIR/awscliv2.zip"
+
+    # Descargar AWS CLI
+    if curl -s -o "$AWS_CLI_ZIP" "$AWS_CLI_URL"; then
+        # Descomprimir e instalar
+        unzip -q "$AWS_CLI_ZIP" -d "$TMP_DIR"
+        sudo "$TMP_DIR/aws/install" --update
+        rm -rf "$TMP_DIR"
+        log_success "AWS CLI instalado correctamente"
+    else
+        log_error "Error descargando AWS CLI"
+        rm -rf "$TMP_DIR"
+        return 1
+    fi
+}
+
 link_dotfiles() {
     log_section "Creando symlinks de dotfiles"
 
@@ -436,6 +466,9 @@ link_dotfiles() {
     link_dotfile "git/.gitconfig" ".gitconfig"
     link_dotfile "git/.gitignore_global" ".gitignore_global"
     link_dotfile "git/gitConfig/" ".gitConfig/"
+
+    # Symlinks de AWS
+    link_dotfile "aws/config" ".aws/config"
 
     # Symlinks de SSH (si existen)
     if [[ -f "$DOTFILES_DIR/ssh/config" ]]; then

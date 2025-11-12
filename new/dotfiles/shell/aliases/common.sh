@@ -39,3 +39,17 @@ alias nrs='npm run start'
 alias -g G='| grep' # (For quick grep in commands)
 alias -g L='| less'
 alias -g H='| head'
+
+aws-switch() {
+  # aws configure --profile nombre-del-perfil
+
+    if [[ -z "$1" ]]; then
+        echo "No se especificó un perfil. Perfiles disponibles:"
+        aws configure list-profiles
+        return 1
+    fi
+
+    export AWS_PROFILE="$1"
+    echo "Perfil AWS cambiado a: $AWS_PROFILE"
+}
+

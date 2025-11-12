@@ -9,13 +9,13 @@ Host qdevwebaws
 	IdentityFile ~/.ssh/victor.madera@narobial
 
 Host qdevweb.intraquiter
-        HostName qdevweb.intraquiter
-        User root
+    HostName qdevweb.intraquiter
+    User root
 	IdentityFile ~/.ssh/victor.madera@qdevweb
 
 Host devweb.quiter.com
-        HostName devweb.quiter.com
-        User root
+    HostName devweb.quiter.com
+    User root
 	IdentityFile ~/.ssh/victor.madera@qdevweb
 
 Host git-codecommit.*.amazonaws.com
