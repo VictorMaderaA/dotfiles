@@ -37,11 +37,15 @@ unset BASHRC_D_DIR
 # Load aliases from ~/.aliases/*.sh directory
 # ============================================================================
 
-if [[ -d ~/.aliases ]]; then
-    for alias_file in ~/.aliases/*.sh; do
-        if [[ -f "$alias_file" ]]; then
-            source "$alias_file"
+ALIASES_DIR="$HOME/.aliases"
+
+if [[ -d "$ALIASES_DIR" ]]; then
+    for config_file in "$ALIASES_DIR"/*.sh; do
+        if [[ -f "$config_file" ]]; then
+            source "$config_file"
         fi
     done
-    unset alias_file
+    unset config_file
 fi
+
+unset ALIASES_DIR

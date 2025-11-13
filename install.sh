@@ -24,8 +24,6 @@
 #find . -type f -name "*.sh" -exec dos2unix {} \;
 
 
-find . -type f -name "*.sh" -exec chmod +x {} \;
-
 set -e
 
 # Script directory
