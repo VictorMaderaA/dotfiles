@@ -9,17 +9,17 @@
 #   --env <env>      Especificar entorno (wsl|desktop|server)
 
 
-find . -type f \( \
-    -name "*.sh" -o \
-    -name "*.conf" -o \
-    -name "*.md" -o \
-    -name ".zshrc" -o \
-    -name ".bashrc" -o \
-    -name ".profile" -o \
-    -name ".gitconfig" -o \
-    -name "*.yaml" -o \
-    -name "*.yml" \
-    \) -not -path "*.git/*" -exec dos2unix {} \;
+#find . -type f \( \
+#    -name "*.sh" -o \
+#    -name "*.conf" -o \
+#    -name "*.md" -o \
+#    -name ".zshrc" -o \
+#    -name ".bashrc" -o \
+#    -name ".profile" -o \
+#    -name ".gitconfig" -o \
+#    -name "*.yaml" -o \
+#    -name "*.yml" \
+#    \) -not -path "*.git/*" -exec dos2unix {} \;
 
 #find . -type f -name "*.sh" -exec dos2unix {} \;
 
