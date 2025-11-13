@@ -187,25 +187,56 @@ install_docker() {
 
     # Saltear si estamos en WSL (Docker Desktop se instala en Windows)
     if [[ "$IS_WSL" == true ]]; then
-        log_warn "WSL detectado - saltando Docker (instala Docker Desktop en Windows)"
+        log_warn "WSL detectado - configurando permisos de Docker..."
+
+        # Añadir usuario al grupo docker
+        if ! groups "$(whoami)" | grep -q docker; then
+            log_info "Añadiendo usuario al grupo docker..."
+            sudo usermod -aG docker "$(whoami)"
+            log_success "Usuario añadido al grupo docker"
+        fi
+
+        # Reiniciar el daemon de Docker
+        if command -v systemctl &> /dev/null; then
+            log_info "Reiniciando daemon de Docker..."
+            sudo systemctl restart docker
+            sleep 2
+        fi
+
+        # Cambiar permisos del socket si es necesario
+        if [[ -S /var/run/docker.sock ]]; then
+            sudo chmod 666 /var/run/docker.sock
+            log_info "Permisos del socket Docker ajustados"
+        fi
+
+        log_warn "Para que los cambios surtan efecto, ejecuta: newgrp docker"
         return 0
     fi
 
     if ! command -v docker &> /dev/null; then
         log_info "Instalando Docker..."
         curl -fsSL https://get.docker.com -o get-docker.sh
-        sudo sh get-docker.sh
+        sh get-docker.sh
         rm get-docker.sh
 
         # Añadir usuario al grupo docker
-        sudo usermod -aG docker "$(whoami)"
-        log_warn "Usuario añadido al grupo docker - reinicia sesión o usa: newgrp docker"
+        if ! groups "$(whoami)" | grep -q docker; then
+            log_info "Añadiendo usuario al grupo docker..."
+            sudo usermod -aG docker "$(whoami)"
+            log_warn "Usuario añadido al grupo docker - reinicia sesión o usa: newgrp docker"
+        fi
+    else
+        log_info "Docker ya está instalado"
     fi
 
     if ! command -v docker-compose &> /dev/null; then
         log_info "Instalando Docker Compose..."
-        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        DOCKER_COMPOSE_URL="https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)"
+        curl -L "$DOCKER_COMPOSE_URL" -o /tmp/docker-compose
+        sudo mv /tmp/docker-compose /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
+    else
+        log_info "Docker Compose ya está instalado"
     fi
 
     log_success "Docker instalado"

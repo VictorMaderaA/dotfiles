@@ -40,6 +40,9 @@ alias -g G='| grep' # (For quick grep in commands)
 alias -g L='| less'
 alias -g H='| head'
 
+#Docker
+alias dr='docker compose run -it --rm'
+
 aws-switch() {
   # aws configure --profile nombre-del-perfil
 
