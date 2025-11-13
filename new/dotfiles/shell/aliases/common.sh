@@ -53,3 +53,55 @@ aws-switch() {
     echo "Perfil AWS cambiado a: $AWS_PROFILE"
 }
 
+aws-assume-qbi() {
+  local ROLE_ARN="arn:aws:iam::029423023787:role/QBI-VictorMadera-CrossAccount"
+  local SESSION_NAME="qbi-work-session"
+  local EXTERNAL_ID="qbi-victor-madera-access"
+  local PROFILE_NAME="qbi"
+  local CREDENTIALS_FILE="$HOME/.aws/credentials"
+
+  echo "Asumiendo el rol..."
+  local CREDENTIALS_JSON=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name "$SESSION_NAME" --external-id "$EXTERNAL_ID")
+
+  local AWS_ACCESS_KEY_ID=$(echo "$CREDENTIALS_JSON" | jq -r '.Credentials.AccessKeyId')
+  local AWS_SECRET_ACCESS_KEY=$(echo "$CREDENTIALS_JSON" | jq -r '.Credentials.SecretAccessKey')
+  local AWS_SESSION_TOKEN=$(echo "$CREDENTIALS_JSON" | jq -r '.Credentials.SessionToken')
+
+  if [ "$AWS_ACCESS_KEY_ID" = "null" ] || [ -z "$AWS_ACCESS_KEY_ID" ]; then
+    echo "Error: No se pudieron obtener las credenciales. Revisa permisos y parámetros."
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$CREDENTIALS_FILE")"
+  echo "Actualizando perfil [$PROFILE_NAME] en $CREDENTIALS_FILE..."
+
+  if command -v crudini >/dev/null 2>&1; then
+    crudini --set "$CREDENTIALS_FILE" "$PROFILE_NAME" aws_access_key_id "$AWS_ACCESS_KEY_ID"
+    crudini --set "$CREDENTIALS_FILE" "$PROFILE_NAME" aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+    crudini --set "$CREDENTIALS_FILE" "$PROFILE_NAME" aws_session_token "$AWS_SESSION_TOKEN"
+    crudini --set "$CREDENTIALS_FILE" "$PROFILE_NAME" region "us-east-1"
+  else
+    awk -v profile="[$PROFILE_NAME]" '
+      BEGIN {skip=0}
+      $0 == profile {skip=1; next}
+      /^\[.*\]/ {skip=0}
+      !skip {print}
+    ' "$CREDENTIALS_FILE" > "${CREDENTIALS_FILE}.tmp" && mv "${CREDENTIALS_FILE}.tmp" "$CREDENTIALS_FILE"
+
+    {
+      echo ""
+      echo "[$PROFILE_NAME]"
+      echo "aws_access_key_id = $AWS_ACCESS_KEY_ID"
+      echo "aws_secret_access_key = $AWS_SECRET_ACCESS_KEY"
+      echo "aws_session_token = $AWS_SESSION_TOKEN"
+      echo "region = us-east-1"
+    } >> "$CREDENTIALS_FILE"
+  fi
+
+  export AWS_PROFILE="$PROFILE_NAME"
+  echo "Perfil [$PROFILE_NAME] actualizado y activado en el entorno."
+  echo ""
+  echo "Para comprobar el perfil, ejecuta:"
+  echo "aws sts get-caller-identity --profile $PROFILE_NAME"
+}
+
