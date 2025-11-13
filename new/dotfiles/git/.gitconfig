@@ -6,7 +6,7 @@
 [core]
     editor = vim
     excludesFile = ~/.gitignore_global
-	autocrlf = true
+	autocrlf = input
     sshCommand = "ssh -o IdentitiesOnly=yes -i ~/.ssh/VictorMaderaA -i ~/.ssh/narobialPcGithubVictorMaderaA"
 [alias]
     st = status

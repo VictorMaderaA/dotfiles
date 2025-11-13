@@ -24,10 +24,3 @@ if [ -n "$BASH_VERSION" ]; then
         . "$HOME/.bashrc"
     fi
 fi
-
-# set terminal
-export TERM=xterm-256color
-
-# locale configuration
-export LC_ALL=es_ES.UTF-8
-export LANG=es_ES.UTF-8
