@@ -196,13 +196,6 @@ install_docker() {
             log_success "Usuario añadido al grupo docker"
         fi
 
-        # Reiniciar el daemon de Docker
-        if command -v systemctl &> /dev/null; then
-            log_info "Reiniciando daemon de Docker..."
-            sudo systemctl restart docker
-            sleep 2
-        fi
-
         # Cambiar permisos del socket si es necesario
         if [[ -S /var/run/docker.sock ]]; then
             sudo chmod 666 /var/run/docker.sock

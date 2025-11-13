@@ -24,4 +24,4 @@
 
 # Config para repos en ~/narobial
 [includeIf "gitdir:~/narobial/"]
-    path = ~/.gitconfigs/gitconfig_narobial
+    path = ~/.gitConfig/gitconfig_narobial
