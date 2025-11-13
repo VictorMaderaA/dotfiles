@@ -504,7 +504,7 @@ link_dotfiles() {
     # Symlinks de shell
     link_dotfile "shell/.zshrc" ".zshrc"
     link_dotfile "shell/.bashrc" ".bashrc"
-    link_dotfile "shell/.bashrc.d/" ".bashrc.d/"
+    link_dotfile "shell/zshrc.d/" ".zshrc.d/"
     link_dotfile "shell/.profile" ".profile"
     link_dotfile "shell/aliases/" ".aliases/"
 
