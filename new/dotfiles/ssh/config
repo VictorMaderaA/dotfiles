@@ -24,5 +24,12 @@ Host git-codecommit.*.amazonaws.com
     IdentitiesOnly yes
     StrictHostKeyChecking no
 
+Host github.com
+    User git
+    IdentityFile ~/.ssh/VictorMaderaA
+    IdentityFile ~/.ssh/narobialPcGithubVictorMaderaA
+    IdentityFile ~/.ssh/victor.madera_narobial.net
+    IdentitiesOnly yes
+
 Host *
 	IdentityFile ~/.ssh/VictorMaderaA

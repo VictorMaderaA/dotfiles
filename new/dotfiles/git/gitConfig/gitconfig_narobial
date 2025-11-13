@@ -1,3 +1,6 @@
 [user]
     name = "victor.madera"
     email = "victor.madera@narobial.net"
+
+[core]
+    sshCommand = "ssh -o IdentitiesOnly=yes -i ~/.ssh/~/.ssh/victor.madera_narobial.net"
