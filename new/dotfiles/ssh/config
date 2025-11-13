@@ -20,7 +20,7 @@ Host devweb.quiter.com
 
 Host git-codecommit.*.amazonaws.com
     User APKAQNWN7W2VZQTLNWOX
-    IdentityFile ~/.ssh/narobial_aws
+    IdentityFile ~/.ssh/narobialAws
     IdentitiesOnly yes
     StrictHostKeyChecking no
 

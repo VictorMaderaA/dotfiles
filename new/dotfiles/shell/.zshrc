@@ -15,7 +15,7 @@ SAVEHIST=10000
 setopt appendhistory
 
 # Keybindings (vim-like)
-bindkey -v
+# bindkey -v
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
