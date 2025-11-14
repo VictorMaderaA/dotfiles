@@ -28,7 +28,7 @@ Host github.com
     User git
     IdentityFile ~/.ssh/VictorMaderaA
     IdentityFile ~/.ssh/narobialPcGithubVictorMaderaA
-    IdentityFile ~/.ssh/victor.madera@narobial
+    IdentityFile ~/.ssh/victor.madera@narobial.net
     IdentitiesOnly yes
 
 Host *

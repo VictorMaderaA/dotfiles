@@ -3,4 +3,4 @@
     email = "victor.madera@narobial.net"
 
 [core]
-    sshCommand = "ssh -o IdentitiesOnly=yes -i ~/.ssh/~/.ssh/victor.madera_narobial.net"
+    sshCommand = "ssh -o IdentitiesOnly=yes -i ~/.ssh/victor.madera@narobial.net"
