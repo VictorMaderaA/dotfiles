@@ -42,3 +42,14 @@ alias -g H='| head'
 
 #Docker
 alias dr='docker compose run -it --rm'
+
+alias grep='grep --color=auto' # (Grep con colores por defecto)
+
+alias rename='renombrar'
+renombrar() {
+  if [ $# -ne 2 ]; then
+    echo "Uso: renombrar archivo_o_carpeta_vieja archivo_o_carpeta_nueva"
+  else
+    mv "$1" "$2"
+  fi
+}
