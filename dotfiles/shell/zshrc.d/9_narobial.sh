@@ -19,8 +19,6 @@ _init_narobial() {
     if [[ "$in_narobial" == true ]] && [[ "$_NAROBIAL_INITIALIZED" == false ]]; then
         aws-switch narobial
         echo "🚀 Entorno narobial iniciado"
-        echo "   SSH Agent: $(ssh-add -l | wc -l) claves cargadas"
-        echo ""
         _NAROBIAL_INITIALIZED=true
     elif [[ "$in_narobial" == false ]] && [[ "$_NAROBIAL_INITIALIZED" == true ]]; then
         _NAROBIAL_INITIALIZED=false
