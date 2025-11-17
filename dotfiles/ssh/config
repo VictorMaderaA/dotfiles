@@ -18,13 +18,18 @@ Host devweb.quiter.com
     User root
     IdentityFile ~/.ssh/victor.madera@qdevweb
 
-Host git-codecommit.*.amazonaws.com
+Host codecommit-ireland
+    Hostname git-codecommit.eu-central-1.amazonaws.com
+    Port 443
     User APKAQNWN7W2VZQTLNWOX
     IdentityFile ~/.ssh/narobialAws
     IdentitiesOnly yes
     StrictHostKeyChecking no
 
+
 Host github.com
+    Hostname ssh.github.com
+    Port 443
     User git
     IdentityFile ~/.ssh/VictorMaderaA
     IdentityFile ~/.ssh/narobialPcGithubVictorMaderaA

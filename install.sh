@@ -194,6 +194,7 @@ install_development_tools() {
     install_nvm
     install_pyenv
     install_aws_cli
+    install_pipx
 
     log_success "Herramientas de desarrollo instaladas"
 }
@@ -204,6 +205,12 @@ install_docker() {
     # Saltear si estamos en WSL (Docker Desktop se instala en Windows)
     if [[ "$IS_WSL" == true ]]; then
         log_warn "WSL detectado - configurando permisos de Docker..."
+
+        if ! getent group docker > /dev/null; then
+            log_info "Creando grupo docker..."
+            sudo groupadd docker
+            log_success "Grupo docker creado"
+        fi
 
         # Añadir usuario al grupo docker
         if ! groups "$(whoami)" | grep -q docker; then
@@ -442,6 +449,14 @@ install_aws_cli() {
         rm -rf "$TMP_DIR"
         return 1
     fi
+}
+
+install_pipx() {
+  # Instala pipx (una sola vez)
+  sudo apt install pipx
+
+  # Instala git-remote-codecommit
+  pipx install git-remote-codecommit
 }
 
 link_dotfiles() {
