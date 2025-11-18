@@ -1,0 +1,1 @@
+export PATH="$PATH:$HOME/.local/bin/git-remote-codecommit"

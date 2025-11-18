@@ -49,3 +49,9 @@ if [[ -d "$BASHRC_D_DIR" ]]; then
 fi
 
 unset BASHRC_D_DIR
+
+
+# Mostrar neofetch solo si la terminal se abre en home
+if [[ "$PWD" == "$HOME" ]]; then
+    neofetch
+fi

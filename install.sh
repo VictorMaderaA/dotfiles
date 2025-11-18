@@ -177,6 +177,9 @@ install_shell_tools() {
         curl -sS https://starship.rs/install.sh | sh -s -- -y
     fi
 
+    # Instalar Nerd Fonts
+    install_nerd_fonts
+
     log_success "Herramientas de shell instaladas"
 }
 
@@ -452,9 +455,6 @@ install_aws_cli() {
 }
 
 install_pipx() {
-  # Instala pipx (una sola vez)
-  sudo apt install pipx
-
   # Instala git-remote-codecommit
   pipx install git-remote-codecommit
 }
@@ -645,6 +645,88 @@ EOF
     fi
 
     log_success "Configuración de GNOME Terminal completada"
+}
+
+install_nerd_fonts() {
+    log_section "Instalando Nerd Fonts"
+
+    FONTS_DIR="$HOME/.local/share/fonts"
+    TEMP_DIR="/tmp/nerd_fonts_$$"
+
+    mkdir -p "$FONTS_DIR"
+    mkdir -p "$TEMP_DIR"
+
+    # Array de fuentes disponibles en v3.4.0
+    local fonts=(
+        "Meslo"
+        "FiraCode"
+        "JetBrainsMono"
+        "SourceCodePro"
+    )
+
+    local installed=0
+    local failed=0
+
+    for font in "${fonts[@]}"; do
+        local zip_file="$TEMP_DIR/${font}.zip"
+
+        log_info "Procesando ${font}..."
+
+        # Descargar solo si no existe
+        if [[ ! -f "$zip_file" ]]; then
+            log_info "  Descargando ${font}.zip..."
+
+            if ! curl -fL -o "$zip_file" \
+                "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/${font}.zip"; then
+                log_error "  ✗ Error descargando ${font}"
+                failed=$((failed + 1))
+                continue
+            fi
+        else
+            log_info "  ${font}.zip ya descargado (usando cache local)"
+        fi
+
+        # Validar archivo ZIP
+        if ! unzip -t "$zip_file" &>/dev/null; then
+            log_error "  ✗ ${font}.zip corrupto o inválido"
+            rm -f "$zip_file"
+            failed=$((failed + 1))
+            continue
+        fi
+
+        # Extraer sin prompts (sobrescribir automáticamente)
+        if unzip -q -o "$zip_file" -d "$FONTS_DIR"; then
+            log_success "  ✓ ${font} instalada"
+            installed=$((installed + 1))
+            rm -f "$zip_file"
+        else
+            log_error "  ✗ Error extrayendo ${font}"
+            failed=$((failed + 1))
+        fi
+    done
+
+    # Actualizar caché de fuentes
+    if [[ $installed -gt 0 ]]; then
+        log_info "Actualizando caché de fuentes..."
+        if fc-cache -fv "$FONTS_DIR" > /dev/null 2>&1; then
+            log_success "Caché actualizado"
+        else
+            log_warn "Advertencia: No se pudo actualizar el caché de fuentes"
+        fi
+    fi
+
+    # Limpiar
+    rm -rf "$TEMP_DIR"
+
+    # Resumen
+    if [[ $installed -gt 0 ]]; then
+        log_success "✓ $installed fuentes instaladas en $FONTS_DIR"
+    fi
+
+    if [[ $failed -gt 0 ]]; then
+        log_error "✗ $failed fuentes fallaron"
+        return 1
+    fi
 }
 
 run_post_install() {

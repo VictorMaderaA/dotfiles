@@ -18,7 +18,7 @@ Host devweb.quiter.com
     User root
     IdentityFile ~/.ssh/victor.madera@qdevweb
 
-Host codecommit-ireland
+Host git-codecommit.eu-central-1.amazonaws.com
     Hostname git-codecommit.eu-central-1.amazonaws.com
     Port 443
     User APKAQNWN7W2VZQTLNWOX
