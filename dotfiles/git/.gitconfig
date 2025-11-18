@@ -8,6 +8,10 @@
     excludesFile = ~/.gitignore_global
 	autocrlf = input
     sshCommand = "ssh -o IdentitiesOnly=yes -i ~/.ssh/VictorMaderaA -i ~/.ssh/narobialPcGithubVictorMaderaA"
+
+[push]
+	autoSetupRemote = true
+
 [alias]
     st = status
     s = status
