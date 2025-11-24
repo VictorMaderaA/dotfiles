@@ -665,6 +665,7 @@ install_nerd_fonts() {
     )
 
     local installed=0
+    local skipped=0
     local failed=0
 
     for font in "${fonts[@]}"; do
@@ -672,7 +673,31 @@ install_nerd_fonts() {
 
         log_info "Procesando ${font}..."
 
-        # Descargar solo si no existe
+        # Verificar si la fuente ya está instalada
+        # Busca archivos .ttf o .otf que contengan el nombre de la fuente (case-insensitive)
+        if find "$FONTS_DIR" -type f \( -iname "*${font}*.ttf" -o -iname "*${font}*.otf" \) | grep -q .; then
+            log_info "  ⊙ ${font} ya instalada (omitiendo)"
+            skipped=$((skipped + 1))
+            continue
+        fi
+
+#        # Reemplaza la verificación anterior con:
+#        # Verificar si la fuente ya está instalada (buscar archivos con patrón específico)
+#        local marker_file="$FONTS_DIR/.${font}_v3.4.0_installed"
+#        if [[ -f "$marker_file" ]]; then
+#            log_info "  ⊙ ${font} v3.4.0 ya instalada (omitiendo)"
+#            skipped=$((skipped + 1))
+#            continue
+#        fi
+#
+#        # Y después de instalar exitosamente, crea el marcador:
+#        if unzip -q -o "$zip_file" -d "$FONTS_DIR"; then
+#            log_success "  ✓ ${font} instalada"
+#            touch "$marker_file"  # Marca que esta versión está instalada
+#            installed=$((installed + 1))
+#            rm -f "$zip_file"
+
+        # Descargar solo si no existe en temp
         if [[ ! -f "$zip_file" ]]; then
             log_info "  Descargando ${font}.zip..."
 
@@ -705,7 +730,7 @@ install_nerd_fonts() {
         fi
     done
 
-    # Actualizar caché de fuentes
+    # Actualizar caché de fuentes solo si se instalaron nuevas
     if [[ $installed -gt 0 ]]; then
         log_info "Actualizando caché de fuentes..."
         if fc-cache -fv "$FONTS_DIR" > /dev/null 2>&1; then
@@ -719,15 +744,24 @@ install_nerd_fonts() {
     rm -rf "$TEMP_DIR"
 
     # Resumen
+    if [[ $skipped -gt 0 ]]; then
+        log_info "⊙ $skipped fuentes ya instaladas"
+    fi
+
     if [[ $installed -gt 0 ]]; then
-        log_success "✓ $installed fuentes instaladas en $FONTS_DIR"
+        log_success "✓ $installed fuentes nuevas instaladas en $FONTS_DIR"
     fi
 
     if [[ $failed -gt 0 ]]; then
         log_error "✗ $failed fuentes fallaron"
         return 1
     fi
+
+    if [[ $installed -eq 0 && $failed -eq 0 ]]; then
+        log_success "✓ Todas las fuentes ya están instaladas"
+    fi
 }
+
 
 run_post_install() {
     log_section "Ejecutando hooks post-instalación"
