@@ -18,6 +18,13 @@ _init_narobial() {
 
     if [[ "$in_narobial" == true ]] && [[ "$_NAROBIAL_INITIALIZED" == false ]]; then
         aws-switch narobial
+
+        # Verificar si existe .nvmrc y nvm está instalado
+        if [[ -f "$narobial_path/.nvmrc" ]] && command -v nvm &> /dev/null; then
+            # ejecutar nvm use
+            nvm use
+        fi
+
         echo "🚀 Entorno narobial iniciado"
         _NAROBIAL_INITIALIZED=true
     elif [[ "$in_narobial" == false ]] && [[ "$_NAROBIAL_INITIALIZED" == true ]]; then
