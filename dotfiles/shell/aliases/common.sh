@@ -53,3 +53,33 @@ renombrar() {
     mv "$1" "$2"
   fi
 }
+
+whisper_subs() {
+  export PYTORCH_ALLOC_CONF=expandable_segments:True
+  export OMP_NUM_THREADS=8
+
+  local filepath="$1"
+  local idioma="${2:-es}"
+  local modelo="${3:-medium}"
+  local output_dir="${4:-$(dirname "$filepath")}"
+
+#tiny
+#base
+#small
+#medium
+#large
+
+  # Obtener nombre base sin extensión
+  local base_name="$(basename "$filepath")"
+  base_name="${base_name%.*}"
+
+  # Carpeta de salida (por defecto misma carpeta del archivo)
+  mkdir -p "$output_dir"
+
+  whisper "$filepath" --language "$idioma" --model "$modelo" --output_format srt --output_dir "$output_dir"
+
+  # Renombrar el archivo .srt generado para que tenga el mismo base_name que el video
+  # Whisper por defecto agrega extensión .srt al nombre original.
+  # Asumimos que Whisper genera archivo con base_name y extensión .srt dentro de output_dir
+  mv "$output_dir"/"${base_name}".srt "$output_dir"/"${base_name}.${idioma}.srt"
+}
