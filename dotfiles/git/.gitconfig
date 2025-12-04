@@ -22,6 +22,7 @@
     lg = log --oneline --graph --all
     a = add
     p = push
+    empty = switch --orphan
 
 [init]
     defaultBranch = main
