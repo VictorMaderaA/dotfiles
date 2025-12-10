@@ -1,14 +1,45 @@
 aws-switch() {
-  # aws configure --profile nombre-del-perfil
+    local profiles selected profile
 
-    if [[ -z "$1" ]]; then
+    # Construir array de perfiles
+    profiles=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && profiles+=("$line")
+    done < <(aws configure list-profiles)
+
+    # Si se pasa nombre de perfil directamente
+    if [[ -n "$1" ]]; then
+        AWS_PROFILE="$1"
+    else
+        if [[ ${#profiles[@]} -eq 0 ]]; then
+            echo "No hay perfiles configurados."
+            return 1
+        fi
+
         echo "No se especificó un perfil. Perfiles disponibles:"
-        aws configure list-profiles
-        return 1
+        PS3="Selecciona el número de perfil: "
+        select profile in "${profiles[@]}"; do
+            if [[ -n "$profile" ]]; then
+                AWS_PROFILE="$profile"
+                break
+            else
+                echo "Selección inválida"
+            fi
+        done
     fi
 
-    export AWS_PROFILE="$1"
-    echo "Perfil AWS cambiado a: $AWS_PROFILE"
+    export AWS_PROFILE
+    echo "Intentando usar el perfil AWS: $AWS_PROFILE"
+
+    # Check de que el perfil funciona correctamente
+    if aws sts get-caller-identity >/dev/null 2>&1; then
+        echo "Perfil AWS cambiado y validado correctamente: $AWS_PROFILE"
+        return 0
+    else
+        echo "Error al validar el perfil AWS: $AWS_PROFILE"
+        echo "Comprueba las credenciales o el perfil configurado."
+        return 1
+    fi
 }
 
 aws-assume-qbi() {
