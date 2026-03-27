@@ -55,8 +55,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Global variables
+FAILED_TASKS=()
+
 # Exportar variables
-export VERBOSE DEBUG NO_BACKUP
+export VERBOSE DEBUG NO_BACKUP FAILED_TASKS
 
 # ============================================================================
 # Sourcing librerías
@@ -69,12 +72,34 @@ source "$SCRIPT_DIR/scripts/lib/package_manager.sh"
 source "$SCRIPT_DIR/scripts/lib/backup.sh"
 source "$SCRIPT_DIR/scripts/lib/utils.sh"
 
+# Cargar instaladores modulares
+source "$SCRIPT_DIR/scripts/installers/base.sh"
+source "$SCRIPT_DIR/scripts/installers/terminal.sh"
+source "$SCRIPT_DIR/scripts/installers/development.sh"
+source "$SCRIPT_DIR/scripts/installers/languages.sh"
+source "$SCRIPT_DIR/scripts/installers/tools.sh"
+source "$SCRIPT_DIR/scripts/installers/docker.sh"
+source "$SCRIPT_DIR/scripts/installers/desktop.sh"
+source "$SCRIPT_DIR/scripts/installers/server.sh"
+
 # Cargar el archivo de configuración
 source "$ENVIRONMENTS_DIR/env.conf"
 
 # ============================================================================
 # Funciones principales
 # ============================================================================
+
+run_task() {
+    local task_name=$1
+    shift
+    log_info "Iniciando tarea: $task_name"
+    if "$@"; then
+        log_success "Tarea completada: $task_name"
+    else
+        log_error "Tarea fallida: $task_name"
+        FAILED_TASKS+=("$task_name")
+    fi
+}
 
 df_check_prerequisites() {
     log_section "Verificando requisitos previos"
@@ -131,324 +156,31 @@ df_env_detect() {
     show_environment_info
 }
 
-df_install_base() {
-    log_section "Instalando paquetes base"
 
-    # Obtener paquetes directamente como array
-    local packages=($(get_packages "BASE_PACKAGES"))
 
-    for pkg in "${packages[@]}"; do
-        pkg_install_if_needed "$pkg"
-    done
 
-    install_tailscale
 
-    log_success "Paquetes base instalados"
-}
 
-df_install_shell() {
-    log_section "Instalando herramientas de shell"
 
-    # Obtener paquetes directamente como array
-    local packages=($(get_packages "SHELL_PACKAGES"))
 
-    for pkg in "${packages[@]}"; do
-        pkg_install_if_needed "$pkg"
-    done
 
-    # Instalar starship (cross-platform prompt)
-    if ! command -v starship &> /dev/null; then
-        log_info "Instalando starship..."
-        curl -sS https://starship.rs/install.sh | sh -s -- -y
-    fi
 
-    # Instalar Nerd Fonts
-    install_nerd_fonts
 
-    log_success "Herramientas de shell instaladas"
-}
 
-df_install_dev() {
-    log_section "Instalando herramientas de desarrollo"
 
-    # Obtener paquetes directamente como array
-    local packages=($(get_packages "DEV_PACKAGES"))
-
-    for pkg in "${packages[@]}"; do
-        pkg_install_if_needed "$pkg"
-    done
-
-    install_bitwarden_cli
-    install_nvm
-    install_pyenv
-    install_aws_cli
-    df_install_pipx
-
-    log_success "Herramientas de desarrollo instaladas"
-}
-
-df_install_docker() {
-    log_section "Instalando Docker"
-
-    # Saltear si estamos en WSL (Docker Desktop se instala en Windows)
-    if [[ "$IS_WSL" == true ]]; then
-        log_warn "WSL detectado - configurando permisos de Docker..."
-
-        if ! getent group docker > /dev/null; then
-            log_info "Creando grupo docker..."
-            sudo groupadd docker
-            log_success "Grupo docker creado"
-        fi
-
-        # Añadir usuario al grupo docker
-        if ! groups "$(whoami)" | grep -q docker; then
-            log_info "Añadiendo usuario al grupo docker..."
-            sudo usermod -aG docker "$(whoami)"
-            log_success "Usuario añadido al grupo docker"
-        fi
-
-        # Cambiar permisos del socket si es necesario
-        if [[ -S /var/run/docker.sock ]]; then
-            sudo chmod 666 /var/run/docker.sock
-            log_info "Permisos del socket Docker ajustados"
-        fi
-
-        log_warn "Para que los cambios surtan efecto, ejecuta: newgrp docker"
-        return 0
-    fi
-
-    if ! command -v docker &> /dev/null; then
-        log_info "Instalando Docker..."
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sh get-docker.sh
-        rm get-docker.sh
-
-        # Añadir usuario al grupo docker
-        if ! groups "$(whoami)" | grep -q docker; then
-            log_info "Añadiendo usuario al grupo docker..."
-            sudo usermod -aG docker "$(whoami)"
-            log_warn "Usuario añadido al grupo docker - reinicia sesión o usa: newgrp docker"
-        fi
-    else
-        log_info "Docker ya está instalado"
-    fi
-
-    if ! command -v docker-compose &> /dev/null; then
-        log_info "Instalando Docker Compose..."
-        DOCKER_COMPOSE_URL="https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)"
-        curl -L "$DOCKER_COMPOSE_URL" -o /tmp/docker-compose
-        sudo mv /tmp/docker-compose /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-    else
-        log_info "Docker Compose ya está instalado"
-    fi
-
-    log_success "Docker instalado"
-}
-
-df_install_desktop() {
-    log_section "Instalando aplicaciones de escritorio"
-
-    if ! is_desktop; then
-        log_warn "Desktop no detectado - saltando aplicaciones GUI"
-        return 0
-    fi
-
-    # Obtener paquetes directamente como array
-    local packages=($(get_packages "DESKTOP_PACKAGES"))
-
-    for pkg in "${packages[@]}"; do
-        pkg_install_if_needed "$pkg"
-    done
-
-    configure_keyboard_shortcuts
-
-    log_success "Aplicaciones de escritorio instaladas"
-}
-
-df_install_server() {
-    log_section "Instalando herramientas de servidor"
-
-    if ! is_server; then
-        log_warn "Server no detectado - saltando herramientas de servidor"
-        return 0
-    fi
-
-    # Obtener paquetes directamente como array
-    local packages=($(get_packages "SERVER_PACKAGES"))
-
-    for pkg in "${packages[@]}"; do
-        pkg_install_if_needed "$pkg"
-    done
-
-    log_success "Herramientas de servidor instaladas"
-}
-
-install_bitwarden_cli() {
-    log_section "Instalando Bitwarden CLI"
-
-    if ! command -v bw &> /dev/null; then
-        log_info "Descargando e instalando Bitwarden CLI..."
-        # Descargar la última versión estable para Linux
-        BW_URL=$(curl -s https://api.github.com/repos/bitwarden/cli/releases/latest | grep "browser_download_url.*bw-linux.*\.zip" | cut -d '"' -f 4)
-
-        if [ -z "$BW_URL" ]; then
-            log_error "No se pudo obtener la URL de descarga de Bitwarden CLI"
-            return 1
-        fi
-
-        echo "Descargando: $BW_URL"
-
-        if curl -L "$BW_URL" -o /tmp/bw.zip; then
-            unzip -o /tmp/bw.zip -d /tmp/
-            sudo mv /tmp/bw /usr/local/bin/
-            sudo chmod +x /usr/local/bin/bw
-            rm /tmp/bw.zip
-            log_success "Bitwarden CLI instalado"
-        else
-            log_error "Error al descargar Bitwarden CLI"
-            return 1
-        fi
-    else
-        log_info "Bitwarden CLI ya está instalado"
-    fi
-}
-
-df_install_jetbrains() {
-    log_section "Instalando JetBrains Toolbox"
-
-    if ! is_desktop; then
-        log_warn "Desktop no detectado - saltando JetBrains Toolbox"
-        return 0
-    fi
-
-    local INSTALL_DIR="$HOME/.local/share/JetBrains/Toolbox"
-    local SYMLINK_DIR="$HOME/.local/bin"
-    local TOOLBOX_BIN="$INSTALL_DIR/bin/jetbrains-toolbox"
-    local TOOLBOX_SYMLINK="$SYMLINK_DIR/jetbrains-toolbox"
-
-    # Verificar si ya está instalado correctamente
-    if [[ -f "$TOOLBOX_BIN" && -x "$TOOLBOX_BIN" ]] && [[ -L "$TOOLBOX_SYMLINK" ]]; then
-        log_info "JetBrains Toolbox ya está instalado"
-        return 0
-    fi
-
-    # Instalar dependencias
-    local deps=("libfuse2" "libxi6" "libxrender1" "libxtst6" "mesa-utils" "libfontconfig" "libgtk-3-bin")
-    for dep in "${deps[@]}"; do
-        pkg_install_if_needed "$dep"
-    done
-
-    log_info "Instalando JetBrains Toolbox..."
-
-    export CI=1
-
-    if curl -fsSL https://raw.githubusercontent.com/nagygergo/jetbrains-toolbox-install/master/jetbrains-toolbox.sh | bash; then
-        log_success "JetBrains Toolbox instalado correctamente"
-        unset CI
-    else
-        log_error "Error instalando JetBrains Toolbox"
-        unset CI
-        return 1
-    fi
-}
-
-install_nvm() {
-    log_section "Instalando nvm (Node Version Manager)"
-
-    local NVM_DIR="$HOME/.nvm"
-    local NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh"
-
-    if [[ -d "$NVM_DIR" ]]; then
-        log_info "nvm ya está instalado"
-        return 0
-    fi
-
-    log_info "Descargando e instalando la última versión de nvm..."
-    if curl -o- "$NVM_INSTALL_URL" | bash; then
-        log_success "nvm instalado correctamente"
-    else
-        log_error "Error instalando nvm"
-        return 1
-    fi
-}
-
-install_pyenv() {
-    log_section "Instalando pyenv (Python Version Manager)"
-
-    local PYENV_ROOT="$HOME/.pyenv"
-    local PYENV_INSTALL_URL="https://raw.githubusercontent.com/pyenv/pyenv-installer/master/bin/pyenv-installer"
-
-    if [[ -d "$PYENV_ROOT" ]]; then
-        log_info "pyenv ya está instalado"
-        return 0
-    fi
-
-    log_info "Descargando e instalando pyenv..."
-    if curl -L "$PYENV_INSTALL_URL" | bash; then
-        log_success "pyenv instalado correctamente"
-    else
-        log_error "Error instalando pyenv"
-        return 1
-    fi
-}
-
-install_tailscale() {
-    log_section "Instalando Tailscale"
-
-    if command -v tailscale &> /dev/null; then
-        log_info "Tailscale ya está instalado"
-        return 0
-    fi
-
-    log_info "Descargando e instalando Tailscale..."
-    if curl -fsSL https://tailscale.com/install.sh | sh; then
-        log_success "Tailscale instalado correctamente"
-    else
-        log_error "Error instalando Tailscale"
-        return 1
-    fi
-}
-
-install_aws_cli() {
-    log_section "Instalando AWS CLI"
-
-    if command -v aws &> /dev/null; then
-        log_info "AWS CLI ya está instalado"
-        return 0
-    fi
-
-    log_info "Descargando e instalando AWS CLI..."
-
-    # Directorio temporal
-    local TMP_DIR=$(mktemp -d)
-    local AWS_CLI_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-    local AWS_CLI_ZIP="$TMP_DIR/awscliv2.zip"
-
-    # Descargar AWS CLI
-    if curl -s -o "$AWS_CLI_ZIP" "$AWS_CLI_URL"; then
-        # Descomprimir e instalar
-        unzip -q "$AWS_CLI_ZIP" -d "$TMP_DIR"
-        sudo "$TMP_DIR/aws/install" --update
-        rm -rf "$TMP_DIR"
-        log_success "AWS CLI instalado correctamente"
-    else
-        log_error "Error descargando AWS CLI"
-        rm -rf "$TMP_DIR"
-        return 1
-    fi
-}
-
-df_install_pipx() {
-  # Instala git-remote-codecommit
-  pipx install git-remote-codecommit
-}
 
 df_dotfiles_link() {
-    log_section "Creando symlinks de dotfiles"
+    log_section "Procesando symlinks desde configuración"
 
     if [[ "$NO_BACKUP" != "1" ]]; then
         init_backup_dir
+    fi
+
+    local SYMLINKS_CONF="$SCRIPT_DIR/config/symlinks.conf"
+
+    if [[ ! -f "$SYMLINKS_CONF" ]]; then
+        log_error "Archivo de configuración de symlinks no encontrado: $SYMLINKS_CONF"
+        return 1
     fi
 
     # Función auxiliar para crear symlink
@@ -499,37 +231,26 @@ df_dotfiles_link() {
         link_recursive "$source" "$target"
     }
 
-    # Symlinks de shell
-    link_dotfile "shell/.zshrc" ".zshrc"
-    link_dotfile "shell/.bashrc" ".bashrc"
-    link_dotfile "shell/zshrc.d/" ".zshrc.d/"
-    link_dotfile "shell/.profile" ".profile"
-    link_dotfile "shell/aliases/" ".aliases/"
+    while IFS=: read -r src tgt; do
+        # Saltar comentarios y líneas vacías
+        [[ -z "$src" || "$src" =~ ^# ]] && continue
 
-    # Symlinks de git
-    link_dotfile "git/.gitconfig" ".gitconfig"
-    link_dotfile "git/.gitignore_global" ".gitignore_global"
-    link_dotfile "git/gitConfig/" ".gitConfig/"
+        # Trim whitespace
+        src=$(echo "$src" | xargs)
+        tgt=$(echo "$tgt" | xargs)
 
-    # Symlinks de AWS
-    link_dotfile "aws/config" ".aws/config"
+        # Caso especial para SSH config
+        if [[ "$src" == "ssh/config" ]]; then
+            mkdir -p "$HOME/.ssh"
+            link_dotfile "$src" "$tgt"
+            chmod 600 "$HOME/.ssh/config"
+            continue
+        fi
 
-    # Symlinks de SSH (si existen)
-    if [[ -f "$DOTFILES_DIR/ssh/config" ]]; then
-        mkdir -p "$HOME/.ssh"
-        link_dotfile "ssh/config" ".ssh/config"
-        chmod 600 "$HOME/.ssh/config"
-    fi
+        link_dotfile "$src" "$tgt"
+    done < "$SYMLINKS_CONF"
 
-    # Symlinks de editors
-    link_dotfile "editors/.vimrc" ".vimrc"
-    link_dotfile "editors/.editorconfig" ".editorconfig"
-
-    # Symlinks de tools
-    link_dotfile "tools/.tmux.conf" ".tmux.conf"
-    link_dotfile "tools/.inputrc" ".inputrc"
-
-    log_success "Symlinks de dotfiles creados"
+    log_success "Symlinks de dotfiles procesados"
 }
 
 df_shell_configure() {
@@ -632,104 +353,6 @@ EOF
     log_success "Configuración de GNOME Terminal completada"
 }
 
-install_nerd_fonts() {
-    log_section "Instalando Nerd Fonts"
-
-    FONTS_DIR="$HOME/.local/share/fonts"
-    TEMP_DIR="/tmp/nerd_fonts_$$"
-
-    mkdir -p "$FONTS_DIR"
-    mkdir -p "$TEMP_DIR"
-
-    # Array de fuentes disponibles en v3.4.0
-    local fonts=(
-        "Meslo"
-        "FiraCode"
-        "JetBrainsMono"
-        "SourceCodePro"
-    )
-
-    local installed=0
-    local skipped=0
-    local failed=0
-
-    for font in "${fonts[@]}"; do
-        local zip_file="$TEMP_DIR/${font}.zip"
-
-        log_info "Procesando ${font}..."
-
-        # Verificar si la fuente ya está instalada
-        # Busca archivos .ttf o .otf que contengan el nombre de la fuente (case-insensitive)
-        if find "$FONTS_DIR" -type f \( -iname "*${font}*.ttf" -o -iname "*${font}*.otf" \) | grep -q .; then
-            log_info "  ⊙ ${font} ya instalada (omitiendo)"
-            skipped=$((skipped + 1))
-            continue
-        fi
-
-        # Descargar solo si no existe en temp
-        if [[ ! -f "$zip_file" ]]; then
-            log_info "  Descargando ${font}.zip..."
-
-            if ! curl -fL -o "$zip_file" \
-                "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/${font}.zip"; then
-                log_error "  ✗ Error descargando ${font}"
-                failed=$((failed + 1))
-                continue
-            fi
-        else
-            log_info "  ${font}.zip ya descargado (usando cache local)"
-        fi
-
-        # Validar archivo ZIP
-        if ! unzip -t "$zip_file" &>/dev/null; then
-            log_error "  ✗ ${font}.zip corrupto o inválido"
-            rm -f "$zip_file"
-            failed=$((failed + 1))
-            continue
-        fi
-
-        # Extraer sin prompts (sobrescribir automáticamente)
-        if unzip -q -o "$zip_file" -d "$FONTS_DIR"; then
-            log_success "  ✓ ${font} instalada"
-            installed=$((installed + 1))
-            rm -f "$zip_file"
-        else
-            log_error "  ✗ Error extrayendo ${font}"
-            failed=$((failed + 1))
-        fi
-    done
-
-    # Actualizar caché de fuentes solo si se instalaron nuevas
-    if [[ $installed -gt 0 ]]; then
-        log_info "Actualizando caché de fuentes..."
-        if fc-cache -fv "$FONTS_DIR" > /dev/null 2>&1; then
-            log_success "Caché actualizado"
-        else
-            log_warn "Advertencia: No se pudo actualizar el caché de fuentes"
-        fi
-    fi
-
-    # Limpiar
-    rm -rf "$TEMP_DIR"
-
-    # Resumen
-    if [[ $skipped -gt 0 ]]; then
-        log_info "⊙ $skipped fuentes ya instaladas"
-    fi
-
-    if [[ $installed -gt 0 ]]; then
-        log_success "✓ $installed fuentes nuevas instaladas en $FONTS_DIR"
-    fi
-
-    if [[ $failed -gt 0 ]]; then
-        log_error "✗ $failed fuentes fallaron"
-        return 1
-    fi
-
-    if [[ $installed -eq 0 && $failed -eq 0 ]]; then
-        log_success "✓ Todas las fuentes ya están instaladas"
-    fi
-}
 
 
 df_hooks_post_install() {
@@ -820,25 +443,36 @@ main() {
     pkg_update
 
     # Instalar en orden
-    df_install_base
-    df_install_shell
-    df_install_dev
-    df_install_jetbrains
-    df_install_docker
-    df_install_desktop
-    df_install_server
+    run_task "Paquetes Base" df_install_base
+    run_task "Herramientas Shell" df_install_shell
+    run_task "Herramientas Desarrollo" df_install_dev
+    run_task "JetBrains Toolbox" df_install_jetbrains
+    run_task "Docker" df_install_docker
+    run_task "Aplicaciones Escritorio" df_install_desktop
+    run_task "Herramientas Servidor" df_install_server
 
     # Configurar
-    df_dotfiles_link
-    df_shell_configure
-    df_terminal_configure
-    df_hooks_post_install
+    run_task "Symlinks" df_dotfiles_link
+    run_task "Configuración Shell" df_shell_configure
+    run_task "Configuración Terminal" df_terminal_configure
+    run_task "Post-Instalación" df_hooks_post_install
 
     # Validar
     df_validate
 
     # Resumen final
-    log_section "¡Instalación Completada!"
+    log_section "¡Proceso Finalizado!"
+
+    if [[ ${#FAILED_TASKS[@]} -gt 0 ]]; then
+        log_error "Las siguientes tareas fallaron:"
+        for task in "${FAILED_TASKS[@]}"; do
+            echo -e "  ${RED}- $task${NC}"
+        done
+        echo ""
+    else
+        log_success "¡Todas las tareas se completaron con éxito!"
+    fi
+
     echo -e "${GREEN}"
     echo "Próximos pasos:"
     echo "  1. Reinicia tu sesión para cargar la nueva shell (zsh)"

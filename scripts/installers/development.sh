@@ -1,17 +1,30 @@
-# scripts/installers/development.sh
 #!/bin/bash
-source "$(dirname "$0")/../lib/logging.sh"
-source "$(dirname "$0")/../lib/package_manager.sh"
+# scripts/installers/development.sh
 
-log_section "Instalando herramientas de desarrollo"
-detect_package_manager
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/logging.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/package_manager.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/utils.sh"
 
-dev_packages=(
-    git git-flow neovim python3 python3-pip nodejs npm
-)
+df_install_dev() {
+    log_section "Instalando herramientas de desarrollo"
 
-for pkg in "${dev_packages[@]}"; do
-    pkg_install_if_needed "$pkg"
-done
+    # Obtener paquetes directamente como array
+    local packages=($(get_packages "DEV_PACKAGES"))
 
-log_success "Dev tools instalados"
+    for pkg in "${packages[@]}"; do
+        pkg_install_if_needed "$pkg"
+    done
+
+    install_bitwarden_cli
+    install_nvm
+    install_pyenv
+    install_aws_cli
+    df_install_pipx
+
+    log_success "Herramientas de desarrollo instaladas"
+}
+
+df_install_pipx() {
+  # Instala git-remote-codecommit
+  pipx install git-remote-codecommit
+}

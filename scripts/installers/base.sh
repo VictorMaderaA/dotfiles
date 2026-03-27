@@ -1,18 +1,21 @@
 #!/bin/bash
-source "$(dirname "$0")/../lib/logging.sh"
-source "$(dirname "$0")/../lib/package_manager.sh"
+# scripts/installers/base.sh
 
-log_section "Instalando paquetes base"
-detect_package_manager
-pkg_update
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/logging.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/package_manager.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/utils.sh"
 
-base_packages=(
-    git curl wget build-essential
-    software-properties-common ca-certificates
-)
+df_install_base() {
+    log_section "Instalando paquetes base"
 
-for pkg in "${base_packages[@]}"; do
-    pkg_install_if_needed "$pkg"
-done
+    # Obtener paquetes directamente como array
+    local packages=($(get_packages "BASE_PACKAGES"))
 
-log_success "Paquetes base instalados"
+    for pkg in "${packages[@]}"; do
+        pkg_install_if_needed "$pkg"
+    done
+
+    install_tailscale
+
+    log_success "Paquetes base instalados"
+}

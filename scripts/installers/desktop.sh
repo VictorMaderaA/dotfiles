@@ -1,71 +1,66 @@
-
 #!/bin/bash
+# scripts/installers/desktop.sh
 
-# Template para instaladores que usan archivos .conf
-# Uso: Copiar este template y modificar las variables según necesidad
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/logging.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/package_manager.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/detect_environment.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/utils.sh"
 
-# Obtener el directorio del script actual
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+df_install_desktop() {
+    log_section "Instalando aplicaciones de escritorio"
 
-# Importar librerías comunes
-source "$SCRIPT_DIR/../lib/logging.sh"
-source "$SCRIPT_DIR/../lib/package_manager.sh"
-
-# Nombre del instalador (modificar según el caso)
-INSTALLER_NAME="template"
-
-install_packages() {
-    local config_file="$1"
-    local packages_var="$2"
-
-    # Verificar que el archivo de configuración existe
-    if [[ ! -f "$config_file" ]]; then
-        log_error "Archivo de configuración no encontrado: $config_file"
-        return 1
-    }
-
-    # Cargar el archivo de configuración
-    source "$config_file"
-
-    # Obtener la variable dinámica usando eval
-    local packages
-    eval "packages=\$$packages_var"
-
-    # Verificar que se obtuvieron los paquetes
-    if [[ -z "$packages" ]]; then
-        log_warn "No hay paquetes definidos en $packages_var"
+    if ! is_desktop; then
+        log_warn "Desktop no detectado - saltando aplicaciones GUI"
         return 0
-    }
+    fi
 
-    # Convertir la string en un array
-    IFS=' ' read -r -a package_array <<< "$packages"
+    # Obtener paquetes directamente como array
+    local packages=($(get_packages "DESKTOP_PACKAGES"))
 
-    # Instalar cada paquete
-    for pkg in "${package_array[@]}"; do
-        # Ignorar líneas vacías
-        [[ -z "$pkg" ]] && continue
+    for pkg in "${packages[@]}"; do
         pkg_install_if_needed "$pkg"
     done
+
+    configure_keyboard_shortcuts
+
+    log_success "Aplicaciones de escritorio instaladas"
 }
 
-main() {
-    log_section "Iniciando instalación: $INSTALLER_NAME"
+df_install_jetbrains() {
+    log_section "Instalando JetBrains Toolbox"
 
-    # Detectar el package manager
-    detect_package_manager
-    pkg_update
+    if ! is_desktop; then
+        log_warn "Desktop no detectado - saltando JetBrains Toolbox"
+        return 0
+    fi
 
-    # Definir rutas (modificar según el caso)
-    local config_file="$SCRIPT_DIR/../../environments/common/packages.conf"
-    local packages_var="PACKAGES_${INSTALLER_NAME^^}"  # Convierte a mayúsculas
+    local INSTALL_DIR="$HOME/.local/share/JetBrains/Toolbox"
+    local SYMLINK_DIR="$HOME/.local/bin"
+    local TOOLBOX_BIN="$INSTALL_DIR/bin/jetbrains-toolbox"
+    local TOOLBOX_SYMLINK="$SYMLINK_DIR/jetbrains-toolbox"
 
-    # Instalar paquetes
-    install_packages "$config_file" "$packages_var"
+    # Verificar si ya está instalado correctamente
+    if [[ -f "$TOOLBOX_BIN" && -x "$TOOLBOX_BIN" ]] && [[ -L "$TOOLBOX_SYMLINK" ]]; then
+        log_info "JetBrains Toolbox ya está instalado"
+        return 0
+    fi
 
-    log_success "Instalación completada: $INSTALLER_NAME"
+    # Instalar dependencias
+    local deps=("libfuse2" "libxi6" "libxrender1" "libxtst6" "mesa-utils" "libfontconfig" "libgtk-3-bin")
+    for dep in "${deps[@]}"; do
+        pkg_install_if_needed "$dep"
+    done
+
+    log_info "Instalando JetBrains Toolbox..."
+
+    export CI=1
+
+    if curl -fsSL https://raw.githubusercontent.com/nagygergo/jetbrains-toolbox-install/master/jetbrains-toolbox.sh | bash; then
+        log_success "JetBrains Toolbox instalado correctamente"
+        unset CI
+    else
+        log_error "Error instalando JetBrains Toolbox"
+        unset CI
+        return 1
+    fi
 }
-
-# Ejecutar solo si se llama directamente
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
-fi
