@@ -9,21 +9,6 @@
 #   --env <env>      Especificar entorno (wsl|desktop|server)
 
 
-#find . -type f \( \
-#    -name "*.sh" -o \
-#    -name "*.conf" -o \
-#    -name "*.md" -o \
-#    -name ".zshrc" -o \
-#    -name ".bashrc" -o \
-#    -name ".profile" -o \
-#    -name ".gitconfig" -o \
-#    -name "*.yaml" -o \
-#    -name "*.yml" \
-#    \) -not -path "*.git/*" -exec dos2unix {} \;
-
-#find . -type f -name "*.sh" -exec dos2unix {} \;
-
-
 set -e
 
 # Script directory
@@ -91,7 +76,7 @@ source "$ENVIRONMENTS_DIR/env.conf"
 # Funciones principales
 # ============================================================================
 
-check_prerequisites() {
+df_check_prerequisites() {
     log_section "Verificando requisitos previos"
 
     # Verificar que somos Linux
@@ -109,7 +94,7 @@ check_prerequisites() {
     log_success "Requisitos cumplidos"
 }
 
-detect_env() {
+df_env_detect() {
     log_section "Detectando entorno"
 
     if ! detect_environment; then
@@ -146,7 +131,7 @@ detect_env() {
     show_environment_info
 }
 
-install_base_packages() {
+df_install_base() {
     log_section "Instalando paquetes base"
 
     # Obtener paquetes directamente como array
@@ -161,7 +146,7 @@ install_base_packages() {
     log_success "Paquetes base instalados"
 }
 
-install_shell_tools() {
+df_install_shell() {
     log_section "Instalando herramientas de shell"
 
     # Obtener paquetes directamente como array
@@ -183,7 +168,7 @@ install_shell_tools() {
     log_success "Herramientas de shell instaladas"
 }
 
-install_development_tools() {
+df_install_dev() {
     log_section "Instalando herramientas de desarrollo"
 
     # Obtener paquetes directamente como array
@@ -197,12 +182,12 @@ install_development_tools() {
     install_nvm
     install_pyenv
     install_aws_cli
-    install_pipx
+    df_install_pipx
 
     log_success "Herramientas de desarrollo instaladas"
 }
 
-install_docker() {
+df_install_docker() {
     log_section "Instalando Docker"
 
     # Saltear si estamos en WSL (Docker Desktop se instala en Windows)
@@ -261,7 +246,7 @@ install_docker() {
     log_success "Docker instalado"
 }
 
-install_desktop_apps() {
+df_install_desktop() {
     log_section "Instalando aplicaciones de escritorio"
 
     if ! is_desktop; then
@@ -281,7 +266,7 @@ install_desktop_apps() {
     log_success "Aplicaciones de escritorio instaladas"
 }
 
-install_server_tools() {
+df_install_server() {
     log_section "Instalando herramientas de servidor"
 
     if ! is_server; then
@@ -329,7 +314,7 @@ install_bitwarden_cli() {
     fi
 }
 
-install_jetbrains_toolbox() {
+df_install_jetbrains() {
     log_section "Instalando JetBrains Toolbox"
 
     if ! is_desktop; then
@@ -454,12 +439,12 @@ install_aws_cli() {
     fi
 }
 
-install_pipx() {
+df_install_pipx() {
   # Instala git-remote-codecommit
   pipx install git-remote-codecommit
 }
 
-link_dotfiles() {
+df_dotfiles_link() {
     log_section "Creando symlinks de dotfiles"
 
     if [[ "$NO_BACKUP" != "1" ]]; then
@@ -547,7 +532,7 @@ link_dotfiles() {
     log_success "Symlinks de dotfiles creados"
 }
 
-configure_shell() {
+df_shell_configure() {
     log_section "Configurando shell"
 
     local ZSH_PATH=$(which zsh)
@@ -583,7 +568,7 @@ configure_shell() {
     log_success "Shell configurado"
 }
 
-configure_gnome_terminal() {
+df_terminal_configure() {
     log_section "Configurando GNOME Terminal para usar zsh"
 
     # Solo aplicar si estamos en desktop
@@ -681,22 +666,6 @@ install_nerd_fonts() {
             continue
         fi
 
-#        # Reemplaza la verificación anterior con:
-#        # Verificar si la fuente ya está instalada (buscar archivos con patrón específico)
-#        local marker_file="$FONTS_DIR/.${font}_v3.4.0_installed"
-#        if [[ -f "$marker_file" ]]; then
-#            log_info "  ⊙ ${font} v3.4.0 ya instalada (omitiendo)"
-#            skipped=$((skipped + 1))
-#            continue
-#        fi
-#
-#        # Y después de instalar exitosamente, crea el marcador:
-#        if unzip -q -o "$zip_file" -d "$FONTS_DIR"; then
-#            log_success "  ✓ ${font} instalada"
-#            touch "$marker_file"  # Marca que esta versión está instalada
-#            installed=$((installed + 1))
-#            rm -f "$zip_file"
-
         # Descargar solo si no existe en temp
         if [[ ! -f "$zip_file" ]]; then
             log_info "  Descargando ${font}.zip..."
@@ -763,7 +732,7 @@ install_nerd_fonts() {
 }
 
 
-run_post_install() {
+df_hooks_post_install() {
     log_section "Ejecutando hooks post-instalación"
 
     if [[ -f "$SCRIPT_DIR/scripts/hooks/post-install.sh" ]]; then
@@ -786,23 +755,42 @@ validate_keyboard_shortcuts() {
     fi
 }
 
-validate_installation() {
-    log_section "Validando instalación"
+validate_command() {
+    local cmd=$1
+    if command -v "$cmd" &> /dev/null; then
+        log_success "Comando $cmd: OK"
+    else
+        log_warn "Comando $cmd: NO ENCONTRADO"
+    fi
+}
+
+df_validate() {
+    log_section "Validando instalación completa"
 
     # Validar symlinks
-    [[ -L "$HOME/.zshrc" ]] && log_success ".zshrc symlink OK" || log_warn ".zshrc no está linkedado"
-    [[ -L "$HOME/.gitconfig" ]] && log_success ".gitconfig symlink OK" || log_warn ".gitconfig no está linkedado"
-    [[ -L "$HOME/.tmux.conf" ]] && log_success ".tmux.conf symlink OK" || log_warn ".tmux.conf no está linkedado"
+    [[ -L "$HOME/.zshrc" ]] && log_success ".zshrc symlink OK" || log_warn ".zshrc no está linkeado"
+    [[ -L "$HOME/.gitconfig" ]] && log_success ".gitconfig symlink OK" || log_warn ".gitconfig no está linkeado"
+    [[ -L "$HOME/.tmux.conf" ]] && log_success ".tmux.conf symlink OK" || log_warn ".tmux.conf no está linkeado"
 
-    # Validar comandos importantes
-    command -v git &> /dev/null && log_success "Git: OK" || log_warn "Git: NO encontrado"
-    command -v zsh &> /dev/null && log_success "Zsh: OK" || log_warn "Zsh: NO encontrado"
-    command -v curl &> /dev/null && log_success "Curl: OK" || log_warn "Curl: NO encontrado"
+    # Comandos core
+    validate_command "git"
+    validate_command "zsh"
+    validate_command "starship"
+    validate_command "tmux"
+    validate_command "curl"
+
+    # Entornos y Herramientas
+    validate_command "nvm"
+    validate_command "pyenv"
+    validate_command "aws"
+    validate_command "bw"
+    validate_command "docker"
 
     validate_keyboard_shortcuts
 
     if is_desktop; then
         log_info "Ambiente Desktop detectado"
+        validate_command "jetbrains-toolbox"
     elif is_server; then
         log_info "Ambiente Server detectado"
     elif is_wsl; then
@@ -825,29 +813,29 @@ main() {
     echo -e "${NC}"
     echo ""
 
-    check_prerequisites
-    detect_env
+    df_check_prerequisites
+    df_env_detect
 
     detect_package_manager
     pkg_update
 
     # Instalar en orden
-    install_base_packages
-    install_shell_tools
-    install_development_tools
-    install_jetbrains_toolbox
-    install_docker
-    install_desktop_apps
-    install_server_tools
+    df_install_base
+    df_install_shell
+    df_install_dev
+    df_install_jetbrains
+    df_install_docker
+    df_install_desktop
+    df_install_server
 
     # Configurar
-    link_dotfiles
-    configure_shell
-    configure_gnome_terminal
-    run_post_install
+    df_dotfiles_link
+    df_shell_configure
+    df_terminal_configure
+    df_hooks_post_install
 
     # Validar
-    validate_installation
+    df_validate
 
     # Resumen final
     log_section "¡Instalación Completada!"

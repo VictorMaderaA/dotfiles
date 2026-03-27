@@ -1,3 +1,6 @@
+# Dotfiles management
+alias dotfiles-update='cd "$DOTFILES_DIR" && git pull && ./install.sh'
+
 #Navigation and listing:
 alias ll='ls -alF' # (Long detailed listing with file type indicators)
 alias la='ls -A' # (List all except . and ..)
