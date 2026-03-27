@@ -1,0 +1,29 @@
+# Dockerfile para probar la instalación en Arch Linux
+FROM archlinux:latest
+
+# Actualizar e instalar dependencias mínimas
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
+    git \
+    sudo \
+    curl \
+    ca-certificates \
+    libnewt \
+    base-devel \
+    && rm -rf /var/cache/pacman/pkg/*
+
+# Crear usuario de prueba
+RUN useradd -m -s /bin/bash tester && \
+    echo "tester ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER tester
+WORKDIR /home/tester/dotfiles
+
+# Copiar el contenido del repositorio
+COPY --chown=tester:tester . .
+
+# Hacer el instalador ejecutable
+RUN chmod +x install.sh
+
+# Ejecutar la instalación en modo no interactivo
+CMD ["./install.sh", "--no-tui", "--env", "server"]

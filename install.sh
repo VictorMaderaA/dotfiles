@@ -28,6 +28,7 @@ VERBOSE=0
 DEBUG=0
 NO_BACKUP=0
 FORCE_ENV=""
+NO_TUI=0
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -44,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             NO_BACKUP=1
             shift
             ;;
+        --no-tui)
+            NO_TUI=1
+            shift
+            ;;
         --env)
             FORCE_ENV="$2"
             shift 2
@@ -57,9 +62,10 @@ done
 
 # Global variables
 FAILED_TASKS=()
+SELECTED_MODULES=()
 
 # Exportar variables
-export VERBOSE DEBUG NO_BACKUP FAILED_TASKS
+export VERBOSE DEBUG NO_BACKUP FAILED_TASKS SELECTED_MODULES NO_TUI
 
 # ============================================================================
 # Sourcing librerías
@@ -365,6 +371,55 @@ df_hooks_post_install() {
     log_success "Hooks post-instalación ejecutados"
 }
 
+df_show_tui() {
+    if [[ "$NO_TUI" == "1" ]]; then
+        SELECTED_MODULES=("BASE" "SHELL" "DEV" "DOCKER" "DESKTOP" "SERVER")
+        return 0
+    fi
+
+    if ! command -v whiptail &> /dev/null; then
+        log_warn "whiptail no está instalado. Saltando TUI."
+        SELECTED_MODULES=("BASE" "SHELL" "DEV" "DOCKER" "DESKTOP" "SERVER")
+        return 0
+    fi
+
+    local choices
+    choices=$(whiptail --title "Instalador de Dotfiles - Victor Madera" --checklist \
+        "Selecciona los módulos a instalar (Espacio para seleccionar, Enter para confirmar):" 20 75 10 \
+        "BASE" "Paquetes esenciales del sistema" ON \
+        "SHELL" "Configuración de Zsh y herramientas CLI" ON \
+        "DEV" "Entornos de desarrollo (NVM, Pyenv, etc.)" ON \
+        "DOCKER" "Docker y Docker Compose" ON \
+        "DESKTOP" "Aplicaciones GUI y JetBrains Toolbox" OFF \
+        "SERVER" "Herramientas de monitoreo y seguridad" OFF \
+        3>&1 1>&2 2>&3)
+
+    if [[ $? -ne 0 ]]; then
+        log_info "Instalación cancelada por el usuario."
+        exit 0
+    fi
+
+    # Limpiar comillas y convertir a array
+    choices=$(echo "$choices" | tr -d '"')
+    SELECTED_MODULES=($choices)
+
+    if [[ ${#SELECTED_MODULES[@]} -eq 0 ]]; then
+        log_warn "No has seleccionado ningún módulo. Saliendo."
+        exit 0
+    fi
+}
+
+df_run_hook() {
+    local module=$1
+    local type=$2 # pre o post
+    local hook_file="$SCRIPT_DIR/dotfiles/$module/hooks/$type-install.sh"
+
+    if [[ -f "$hook_file" ]]; then
+        log_info "Ejecutando hook $type-install para $module..."
+        bash "$hook_file"
+    fi
+}
+
 validate_keyboard_shortcuts() {
     log_section "Validando atajos de teclado"
 
@@ -382,9 +437,24 @@ validate_command() {
     local cmd=$1
     if command -v "$cmd" &> /dev/null; then
         log_success "Comando $cmd: OK"
-    else
-        log_warn "Comando $cmd: NO ENCONTRADO"
+        return 0
     fi
+
+    # Manejo especial para nvm y pyenv que pueden ser funciones de shell o estar instalados en rutas fijas
+    if [[ "$cmd" == "nvm" ]]; then
+        if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+            log_success "nvm detectado en $HOME/.nvm: OK"
+            return 0
+        fi
+    elif [[ "$cmd" == "pyenv" ]]; then
+        if [[ -s "$HOME/.pyenv/bin/pyenv" ]]; then
+            log_success "pyenv detectado en $HOME/.pyenv: OK"
+            return 0
+        fi
+    fi
+
+    log_warn "Comando $cmd: NO ENCONTRADO"
+    return 1
 }
 
 df_validate() {
@@ -439,17 +509,48 @@ main() {
     df_check_prerequisites
     df_env_detect
 
+    # Mostrar menú TUI para seleccionar módulos
+    df_show_tui
+
     detect_package_manager
     pkg_update
 
-    # Instalar en orden
-    run_task "Paquetes Base" df_install_base
-    run_task "Herramientas Shell" df_install_shell
-    run_task "Herramientas Desarrollo" df_install_dev
-    run_task "JetBrains Toolbox" df_install_jetbrains
-    run_task "Docker" df_install_docker
-    run_task "Aplicaciones Escritorio" df_install_desktop
-    run_task "Herramientas Servidor" df_install_server
+    # Instalar en orden según selección
+    for module in "${SELECTED_MODULES[@]}"; do
+        case "$module" in
+            BASE)
+                df_run_hook "system" "pre"
+                run_task "Paquetes Base" df_install_base
+                df_run_hook "system" "post"
+                ;;
+            SHELL)
+                df_run_hook "shell" "pre"
+                run_task "Herramientas Shell" df_install_shell
+                df_run_hook "shell" "post"
+                ;;
+            DEV)
+                df_run_hook "development" "pre"
+                run_task "Herramientas Desarrollo" df_install_dev
+                df_run_hook "development" "post"
+                ;;
+            DOCKER)
+                df_run_hook "docker" "pre"
+                run_task "Docker" df_install_docker
+                df_run_hook "docker" "post"
+                ;;
+            DESKTOP)
+                df_run_hook "desktop" "pre"
+                run_task "JetBrains Toolbox" df_install_jetbrains
+                run_task "Aplicaciones Escritorio" df_install_desktop
+                df_run_hook "desktop" "post"
+                ;;
+            SERVER)
+                df_run_hook "server" "pre"
+                run_task "Herramientas Servidor" df_install_server
+                df_run_hook "server" "post"
+                ;;
+        esac
+    done
 
     # Configurar
     run_task "Symlinks" df_dotfiles_link

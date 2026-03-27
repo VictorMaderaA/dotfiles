@@ -1,0 +1,29 @@
+# Dockerfile para probar la instalación en Fedora
+FROM fedora:latest
+
+# Instalar dependencias mínimas para el instalador
+RUN dnf update -y && dnf install -y \
+    git \
+    sudo \
+    curl \
+    ca-certificates \
+    newt \
+    findutils \
+    which \
+    && dnf clean all
+
+# Crear usuario de prueba
+RUN useradd -m -s /bin/bash tester && \
+    echo "tester ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER tester
+WORKDIR /home/tester/dotfiles
+
+# Copiar el contenido del repositorio
+COPY --chown=tester:tester . .
+
+# Hacer el instalador ejecutable
+RUN chmod +x install.sh
+
+# Ejecutar la instalación en modo no interactivo
+CMD ["./install.sh", "--no-tui", "--env", "server"]

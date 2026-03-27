@@ -11,24 +11,42 @@ detect_package_manager() {
         export PKG_INSTALL_CMD="sudo apt install -y"
         export PKG_SEARCH_CMD="apt search"
         export PKG_REMOVE_CMD="sudo apt remove -y"
+        export OS_FAMILY="debian"
     elif command -v pacman &> /dev/null; then
         export PKG_MANAGER="pacman"
         export PKG_UPDATE_CMD="sudo pacman -Sy"
         export PKG_INSTALL_CMD="sudo pacman -S --noconfirm"
         export PKG_SEARCH_CMD="pacman -Ss"
         export PKG_REMOVE_CMD="sudo pacman -R --noconfirm"
+        export OS_FAMILY="arch"
+    elif command -v dnf &> /dev/null; then
+        export PKG_MANAGER="dnf"
+        export PKG_UPDATE_CMD="sudo dnf check-update"
+        export PKG_INSTALL_CMD="sudo dnf install -y"
+        export PKG_SEARCH_CMD="dnf search"
+        export PKG_REMOVE_CMD="sudo dnf remove -y"
+        export OS_FAMILY="fedora"
     elif command -v yum &> /dev/null; then
         export PKG_MANAGER="yum"
         export PKG_UPDATE_CMD="sudo yum check-update"
         export PKG_INSTALL_CMD="sudo yum install -y"
         export PKG_SEARCH_CMD="yum search"
         export PKG_REMOVE_CMD="sudo yum remove -y"
+        export OS_FAMILY="rhel"
     else
         log_error "No se encontró package manager soportado"
         return 1
     fi
+
+    # Detectar arquitectura
+    export ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64)  export ARCH_TYPE="amd64" ;;
+        aarch64) export ARCH_TYPE="arm64" ;;
+        *)       export ARCH_TYPE="$ARCH" ;;
+    esac
     
-    log_debug "Package manager detectado: $PKG_MANAGER"
+    log_debug "Package manager detectado: $PKG_MANAGER ($OS_FAMILY), Arquitectura: $ARCH_TYPE"
     return 0
 }
 

@@ -1,0 +1,31 @@
+# Dockerfile para probar la instalación en Ubuntu
+FROM ubuntu:22.04
+
+# Evitar prompts interactivos
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar dependencias mínimas para el instalador
+RUN apt-get update && apt-get install -y \
+    git \
+    sudo \
+    curl \
+    ca-certificates \
+    whiptail \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear usuario de prueba
+RUN useradd -m -s /bin/bash tester && \
+    echo "tester ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER tester
+WORKDIR /home/tester/dotfiles
+
+# Copiar el contenido del repositorio
+COPY --chown=tester:tester . .
+
+# Hacer el instalador ejecutable
+RUN chmod +x install.sh
+
+# Ejecutar la instalación en modo no interactivo y forzando entorno server para mayor ligereza
+# Usamos --no-tui para que no falle al no tener terminal interactiva
+CMD ["./install.sh", "--no-tui", "--env", "server"]
