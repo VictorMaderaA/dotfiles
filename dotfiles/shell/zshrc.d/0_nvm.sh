@@ -3,7 +3,7 @@ export NVM_DIR="$HOME/.nvm"
 
 _load_nvm() {
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+  # En Zsh no es necesario cargar bash_completion de nvm, ya lo gestiona compinit
 }
 
 # Lazy load NVM
@@ -38,9 +38,11 @@ nvm_use_project_node() {
   fi
 }
 
-# Ejecutar al entrar en un directorio (Zsh hook)
-autoload -U add-zsh-hook
-add-zsh-hook chpwd nvm_use_project_node
+# Ejecutar al entrar en un directorio (Zsh hook con guardia anti-duplicación)
+if (( ! ${chpwd_functions[(Ie)nvm_use_project_node]} )); then
+  autoload -U add-zsh-hook
+  add-zsh-hook chpwd nvm_use_project_node
+fi
 
 # Ejecutar una vez al inicio
 nvm_use_project_node

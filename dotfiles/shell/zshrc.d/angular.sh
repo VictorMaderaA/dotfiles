@@ -9,7 +9,7 @@ _load_angular_completion() {
   elif [[ -f ./web/node_modules/.bin/ng ]]; then
     ng_bin="./web/node_modules/.bin/ng"
   elif command -v ng >/dev/null 2>&1; then
-    ng_bin="ng"
+    ng_bin="$(command -v ng)"
   fi
 
   if [[ -n "$ng_bin" ]]; then

@@ -44,11 +44,17 @@ compress_av1() {
     ffmpeg -y -i "$f" -nostdin \
       -map_metadata -1 -vf "scale='trunc(iw/2)*2:trunc(ih/2)*2'" \
       -c:v libsvtav1 -crf "$crf" -preset 8 \
-      -c:a aac -b:a 128k "$tmp" && mv "$tmp" "$f"
+      -c:a aac -b:a 128k "$tmp" && \
+    mv "$tmp" "$f" && \
+    echo "✓ $f → AV1 CRF $crf" || {
+      rm -f "$tmp"
+      echo "✗ Error: $f" >&2
+    }
   done
 }
 
 strip_metadata() {
+  echo "Escaneando archivos para eliminar metadata..."
   # En Zsh, podemos iterar recursivamente con **/*
   for f in **/*(ND.); do
       # Saltar si ya es .tmp
