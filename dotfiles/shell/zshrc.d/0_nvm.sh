@@ -39,7 +39,7 @@ nvm_use_project_node() {
 }
 
 # Ejecutar al entrar en un directorio (Zsh hook con guardia anti-duplicación)
-if (( ! ${chpwd_functions[(Ie)nvm_use_project_node]} )); then
+if (( ${chpwd_functions[(Ie)nvm_use_project_node]:-0} == 0 )); then
   autoload -U add-zsh-hook
   add-zsh-hook chpwd nvm_use_project_node
 fi

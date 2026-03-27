@@ -31,7 +31,7 @@ _init_narobial() {
 }
 
 # Usar hook de Zsh para detectar cambios de directorio (con guardia anti-duplicación)
-if (( ! ${chpwd_functions[(Ie)_init_narobial]} )); then
+if (( ${chpwd_functions[(Ie)_init_narobial]:-0} == 0 )); then
   autoload -U add-zsh-hook
   add-zsh-hook chpwd _init_narobial
 fi
