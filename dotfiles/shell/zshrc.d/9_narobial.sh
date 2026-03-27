@@ -1,10 +1,5 @@
-#!/bin/bash
-
 # === narobial initialization ===
 _NAROBIAL_INITIALIZED=false
-
-# Script para detectar si estamos en ~/narobial y ejecutar acciones específicas
-# Agregarlo a ~/.bashrc o ~/.zshrc
 
 # Detectar si estamos en ~/narobial o subdirectorios
 _init_narobial() {
@@ -17,12 +12,16 @@ _init_narobial() {
     fi
 
     if [[ "$in_narobial" == true ]] && [[ "$_NAROBIAL_INITIALIZED" == false ]]; then
-        aws-switch narobial
+        if command -v aws-switch &> /dev/null; then
+            aws-switch narobial
+        fi
 
-        # Verificar si existe .nvmrc y nvm está instalado
-        if [[ -f "$narobial_path/.nvmrc" ]] && command -v nvm &> /dev/null; then
-            # ejecutar nvm use
-            nvm use
+        # Verificar si existe .nvmrc y nvm está disponible
+        if [[ -f "$narobial_path/.nvmrc" ]]; then
+            # nvm se cargará bajo demanda por 0_nvm.sh
+            if command -v nvm &> /dev/null; then
+               nvm use
+            fi
         fi
 
         echo "🚀 Entorno narobial iniciado"
@@ -32,12 +31,9 @@ _init_narobial() {
     fi
 }
 
+# Usar hook de Zsh para detectar cambios de directorio
+autoload -U add-zsh-hook
+add-zsh-hook chpwd _init_narobial
+
 # Ejecutar al iniciar la terminal
 _init_narobial
-
-# También ejecutar cada vez que cambies de directorio
-# Agregar esto al final de tu .bashrc o .zshrc
-cd() {
-    builtin cd "$@"
-    _init_narobial
-}
