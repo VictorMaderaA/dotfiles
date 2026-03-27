@@ -1,2 +1,1 @@
-# Created by `pipx`
-export PATH="$PATH:$HOME/.local/bin"
+# El PATH se gestiona en 0_paths.sh

@@ -1,9 +1,9 @@
-export PATH="$PATH:$HOME/.local/bin/git-remote-codecommit"
+# El PATH se gestiona en 0_paths.sh
 
 # Enable AWS CLI autocompletion (Lazy load)
 _load_aws_completion() {
-  # Solo cargar bashcompinit si no está ya cargado
-  if [[ -z "$(builtin functions bashcompinit)" ]]; then
+  # Solo cargar bashcompinit si no está ya cargado (corrección del check)
+  if (( ! $+functions[bashcompinit] )); then
     autoload -Uz bashcompinit && bashcompinit
   fi
   complete -C '/usr/local/bin/aws_completer' aws

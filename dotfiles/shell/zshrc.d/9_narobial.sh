@@ -16,24 +16,25 @@ _init_narobial() {
             aws-switch narobial
         fi
 
-        # Verificar si existe .nvmrc y nvm está disponible
-        if [[ -f "$narobial_path/.nvmrc" ]]; then
-            # nvm se cargará bajo demanda por 0_nvm.sh
-            if command -v nvm &> /dev/null; then
-               nvm use
-            fi
-        fi
+        # El nvm use ya lo gestiona 0_nvm.sh vía el hook chpwd
+        # que se ejecutará también al entrar aquí.
 
         echo "🚀 Entorno narobial iniciado"
         _NAROBIAL_INITIALIZED=true
     elif [[ "$in_narobial" == false ]] && [[ "$_NAROBIAL_INITIALIZED" == true ]]; then
+        # Reset de perfil AWS al salir si existe aws-switch
+        if command -v aws-switch &>/dev/null; then
+            aws-switch default
+        fi
         _NAROBIAL_INITIALIZED=false
     fi
 }
 
-# Usar hook de Zsh para detectar cambios de directorio
-autoload -U add-zsh-hook
-add-zsh-hook chpwd _init_narobial
+# Usar hook de Zsh para detectar cambios de directorio (con guardia anti-duplicación)
+if (( ! ${chpwd_functions[(Ie)_init_narobial]} )); then
+  autoload -U add-zsh-hook
+  add-zsh-hook chpwd _init_narobial
+fi
 
 # Ejecutar al iniciar la terminal
 _init_narobial

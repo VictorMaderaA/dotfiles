@@ -1,12 +1,11 @@
 # Pyenv configuration (Lazy load)
 export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+# El PATH se gestiona en 0_paths.sh
 
 _load_pyenv() {
   eval "$(pyenv init - zsh)"
-  # También cargar virtualenv si está disponible
-  if pyenv help virtualenv-init >/dev/null 2>&1; then
-    eval "$(pyenv init --path)"
+  # virtualenv-init solo si existe el plugin
+  if pyenv commands 2>/dev/null | grep -q virtualenv-init; then
     eval "$(pyenv virtualenv-init - zsh)"
   fi
 }

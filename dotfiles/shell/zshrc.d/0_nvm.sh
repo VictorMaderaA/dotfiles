@@ -7,32 +7,19 @@ _load_nvm() {
 }
 
 # Lazy load NVM
-nvm() {
-  unset -f nvm
-  _load_nvm
-  nvm "$@"
-}
-
-node() {
-  unset -f node
-  _load_nvm
-  node "$@"
-}
-
-npm() {
-  unset -f npm
-  _load_nvm
-  npm "$@"
-}
-
-npx() {
-  unset -f npx
-  _load_nvm
-  npx "$@"
-}
+nvm()      { unset -f nvm;      _load_nvm; nvm      "$@"; }
+node()     { unset -f node;     _load_nvm; node     "$@"; }
+npm()      { unset -f npm;      _load_nvm; npm      "$@"; }
+npx()      { unset -f npx;      _load_nvm; npx      "$@"; }
+yarn()     { unset -f yarn;     _load_nvm; yarn     "$@"; }
+pnpm()     { unset -f pnpm;     _load_nvm; pnpm     "$@"; }
+corepack() { unset -f corepack; _load_nvm; corepack "$@"; }
 
 # Cambia automáticamente la versión de Node con nvm al entrar en un proyecto.
 nvm_use_project_node() {
+  # No disparar si estamos en $HOME directamente
+  [[ "$PWD" == "$HOME" ]] && return
+
   local node_version=""
 
   if [[ -f ".nvmrc" ]]; then

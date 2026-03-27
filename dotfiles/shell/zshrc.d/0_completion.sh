@@ -1,15 +1,14 @@
-# Bash completion configuration (para Zsh)
-# Solo cargar si compinit está disponible
-if (( $+functions[compinit] )); then
-  if [[ -f /usr/share/zsh/completion/_bash_completion ]]; then
-    source /usr/share/zsh/completion/_bash_completion
-  elif [[ -f /etc/zsh_completion ]]; then
-    source /etc/zsh_completion
-  fi
+# Patrón recomendado para compinit con caché
+autoload -Uz compinit
+if [[ -n ~/.zcompdump(#qN.mh+24) ]]; then
+  compinit -d ~/.zcompdump
 else
-  # Si compinit no se ha cargado aún, lo cargamos aquí para que funcionen las terminaciones básicas
-  autoload -Uz compinit && compinit
-  if [[ -f /usr/share/zsh/completion/_bash_completion ]]; then
-    source /usr/share/zsh/completion/_bash_completion
-  fi
+  compinit -C -d ~/.zcompdump  # -C salta la comprobación de seguridad para mayor velocidad
+fi
+
+# Bash completion configuration (para Zsh)
+if [[ -f /usr/share/zsh/completion/_bash_completion ]]; then
+  source /usr/share/zsh/completion/_bash_completion
+elif [[ -f /etc/zsh_completion ]]; then
+  source /etc/zsh_completion
 fi
