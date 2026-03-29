@@ -36,7 +36,7 @@ const CONFIG = {
     targetVariant: process.env.TARGET_VARIANT || 'es-ES', // p.ej. 'es-ES', 'es-MX'
 
     // Estricto: si demasiados fallbacks, marcar fallo global
-    strictFallbackThreshold: 0.08 // 15% de subs en fallback → error
+    strictFallbackThreshold: 0.08 // 8% de subs en fallback → error
 };
 
 module.exports = { CONFIG };

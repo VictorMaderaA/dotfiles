@@ -341,6 +341,8 @@ function resegmentBlock(originalSub, allWords, margin = 0.4, usedWordIndices = n
             ? Math.min(block.end, origEnd)
             : block.end;
 
+        if (clampedStart >= clampedEnd) return null;
+
         return {
             index: originalSub.index, // se reasigna en el paso final
             timestamp: `${formatTimestamp(clampedStart)} --> ${formatTimestamp(clampedEnd)}`,

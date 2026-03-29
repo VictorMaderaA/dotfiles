@@ -46,6 +46,7 @@ function postProcessText(text) {
         .replace(/\?{2,}/g, '?')           // colapsa ?? → ?
         .replace(/!{2,}/g, '!')            // colapsa !! → !
         .replace(/^([—–]\s*)/gm, '— ')    // normalizar guión de diálogo
+        .replace(/\n{2,}/g, '\n')   // colapsar saltos dobles dentro del texto
         .trim();
 }
 module.exports = { parseSRT, buildSRT };

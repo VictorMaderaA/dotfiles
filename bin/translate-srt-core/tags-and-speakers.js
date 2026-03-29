@@ -64,7 +64,7 @@ function normalizeSpeakerTags(text, speakerMap) {
  * A: texto → texto
  */
 function stripNormalizedSpeakers(text) {
-    return text.replace(/^[A-Z]\s*:\s*/gm, '').trim();
+    return text.replace(/^[A-Z]:\s+(?=\S)/gm, '').trim();
 }
 
 module.exports = {

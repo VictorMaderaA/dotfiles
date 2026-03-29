@@ -162,7 +162,7 @@ async function translateSrtFile(inputFile, outputFile, jsonPath = null) {
                             {role: 'system', content: systemPrompt},
                             {role: 'user', content: userPrompt},
                         ],
-                        {schema: true}
+                        {jsonObject: true}
                     );
 
                     const parsed = JSON.parse(raw);
@@ -204,15 +204,11 @@ async function translateSrtFile(inputFile, outputFile, jsonPath = null) {
             }
         }
 
-        contextBuffer = batch
-            .slice(-CONFIG.contextSize)
-            .map(s => ({
-                ...s,
-                translatedText: restoreTags(
-                    resultMap.get(s.index) ?? s.text,
-                    tagMaps.get(s.index)
-                )
-            }));
+        const newItems = batch.slice(-CONFIG.contextSize).map(s => ({
+            ...s,
+            translatedText: restoreTags(resultMap.get(s.index) ?? s.text, tagMaps.get(s.index))
+        }));
+        contextBuffer = [...contextBuffer, ...newItems].slice(-CONFIG.contextSize);
 
         console.log('✅');
 
@@ -230,9 +226,11 @@ async function translateSrtFile(inputFile, outputFile, jsonPath = null) {
         };
     });
 
-    const unchanged = outputSubs.filter(
-        s => s.text === cleanedSubtitles.find(o => o.index === s.index)?.text
-    ).length;
+    // ✅ Comparar contra el texto ya procesado (sin hablantes):
+    const cleanedStripped = new Map(
+        cleanedSubtitles.map(s => [s.index, stripNormalizedSpeakers(restoreTags(s.text, tagMaps.get(s.index)))])
+    );
+    const unchanged = outputSubs.filter(s => s.text === cleanedStripped.get(s.index)).length;
 
     if (unchanged > 0) log.warn(`${unchanged} subtítulos conservaron el texto original (fallback).`);
 
@@ -288,7 +286,7 @@ async function translateBatchIndividually(subs, systemPrompt, resultMap) {
                         {role: 'system', content: systemPrompt},
                         {role: 'user', content: buildSinglePrompt(sub)},
                     ],
-                    {schema: true}
+                    {jsonObject: true}
                 );
                 const text = (JSON.parse(raw).translations ?? {})[String(sub.index)];
                 if (text) {

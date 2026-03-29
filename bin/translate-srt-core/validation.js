@@ -45,8 +45,10 @@ function validateSubtitleText(original, translated) {
         return { ok: false, reason: 'texto idéntico al original (sin traducir)' };
     }
     // ¿Placeholder sin restaurar?
-    if (/__T\d+__/.test(translated)) {
-        return { ok: false, reason: 'placeholder __Tn__ sin restaurar' };
+    const origTags = (original.match(/__T\d+__/g) || []).sort().join(',');
+    const transTags = (translated.match(/__T\d+__/g) || []).sort().join(',');
+    if (origTags !== transTags) {
+        return { ok: false, reason: `placeholders modificados (orig: [${origTags}], trad: [${transTags}])` };
     }
     return { ok: true };
 }

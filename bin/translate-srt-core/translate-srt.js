@@ -62,6 +62,12 @@ async function main() {
         outputArg ??
         inputFile.replace(/\.srt$/i, '.es.srt');
 
+    // ✅ Añadir tras calcular outputFile:
+    if (path.resolve(outputFile) === path.resolve(inputFile)) {
+        console.error('❌ El archivo de salida no puede ser el mismo que el de entrada.');
+        process.exit(1);
+    }
+
     try {
         await translateSrtFile(inputFile, outputFile, jsonPath);
     } catch (err) {

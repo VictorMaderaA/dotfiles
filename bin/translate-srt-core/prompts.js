@@ -1,19 +1,21 @@
 // prompts.js
 'use strict';
 
-const { CONFIG } = require('./config');
-const { callOpenAI } = require('./openai-client');
+const {CONFIG} = require('./config');
+const {callOpenAI} = require('./openai-client');
 
 /**
  * Extrae glosario y metadatos de una muestra.
  */
 async function extractGlossary(subtitles) {
     const total = subtitles.length;
+    const seen = new Set();
     const indices = [
         ...subtitles.slice(0, 30),
         ...subtitles.slice(Math.floor(total * 0.4), Math.floor(total * 0.4) + 25),
         ...subtitles.slice(Math.floor(total * 0.75), Math.floor(total * 0.75) + 25),
-    ];
+    ]
+        .filter(s => !seen.has(s.index) && seen.add(s.index));
     const sample = indices.map(s => s.text).join(' ');
 
     const system = `Eres un asistente de localización. Analiza el fragmento y devuelve SOLO este JSON:
@@ -28,10 +30,10 @@ Máximo 30 términos. Si no hay términos relevantes, devuelve "glossary": [].`;
     try {
         const raw = await callOpenAI(
             [
-                { role: 'system', content: system },
-                { role: 'user', content: `Transcripción:\n${sample}` }
+                {role: 'system', content: system},
+                {role: 'user', content: `Transcripción:\n${sample}`}
             ],
-            { schema: true, temperature: 0.1 }
+            {jsonObject: true, temperature: 0.1}
         );
         const data = JSON.parse(raw);
         return {
@@ -41,7 +43,7 @@ Máximo 30 términos. Si no hay términos relevantes, devuelve "glossary": [].`;
         };
     } catch (err) {
         console.warn(`⚠️ No se pudo extraer glosario: ${err.message}`);
-        return { glossary: [], contentType: 'other', register: 'mixed' };
+        return {glossary: [], contentType: 'other', register: 'mixed'};
     }
 }
 
@@ -117,7 +119,7 @@ function buildUserPrompt(batch, context) {
     // En buildUserPrompt, cambiar el formato del bloque CONTEXTO:
     const ctxBlock = context.length
         ? `<CONTEXTO>\n${context.map(s =>
-            `${s.index} [orig]: ${s.protectedText}\n${s.index} [trad]: ${s.translatedText}`
+            `${s.index} [orig]: ${s.text}\n${s.index} [trad]: ${s.translatedText}`
         ).join('\n')}\n</CONTEXTO>\n\n`
         : '';
 
