@@ -2,7 +2,7 @@
 'use strict';
 
 // [MUSIC], [APPLAUSE], ♪ ... ♪, (laughs), etiquetas HTML, etc.
-const TAG_PATTERN = /(\[[^\]]+\]|♪[^♪\n]*♪|♪|\([^)\\n]{1,40}\)|<[a-zA-Z/][^>]*>)/g;
+const TAG_PATTERN = /(\[[^\]]+\]|♪[^♪\n]*♪|♪|\([^)\n]{1,40}\)|<[a-zA-Z/][^>]*>)/g;
 
 // [SPEAKER_06]:, [S1]:, [John]:, SPEAKER 1:
 const SPEAKER_TAG_PATTERN = /\[([A-Z_a-z0-9 ]+)\]:\s*/g;

@@ -9,3 +9,8 @@ fi
 if [[ -d "$HOME/.pyenv/bin" && ":$PATH:" != *":$HOME/.pyenv/bin:"* ]]; then
   export PATH="$HOME/.pyenv/bin:$PATH"
 fi
+
+# Añadir ~/dotfiles/bin si existe
+if [[ -d "$HOME/dotfiles/bin" && ":$PATH:" != *":$HOME/dotfiles/bin:"* ]]; then
+  export PATH="$HOME/dotfiles/bin:$PATH"
+fi

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 export HF_TOKEN="REMOVED"   # HuggingFace — requerido para diarización
-export WHISPER_MODEL="large-v3"             # Modelo (default: large-v3)
-export WHISPER_OUTPUT_DIR="subtitles" # Directorio de salida
 
 # whisper_subs_v2.sh
 #
@@ -15,7 +13,7 @@ export WHISPER_OUTPUT_DIR="subtitles" # Directorio de salida
 #     BÓRRALO antes de hacer push al repo público.
 
 export WHISPER_MODEL="${WHISPER_MODEL:-large-v3}"      # Modelo WhisperX (large-v3 por defecto)
-export WHISPER_OUTPUT_DIR="${WHISPER_OUTPUT_DIR:-$HOME/subtitles}"  # Directorio de salida por defecto
+export WHISPER_OUTPUT_DIR="${WHISPER_OUTPUT_DIR:-./subtitles}"  # Directorio de salida por defecto
 
 whisper_subs() {
   local input="$1"
