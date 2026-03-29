@@ -8,10 +8,13 @@ const { callOpenAI } = require('./openai-client');
  * Extrae glosario y metadatos de una muestra.
  */
 async function extractGlossary(subtitles) {
-    const sample = subtitles
-        .slice(0, Math.min(80, subtitles.length))
-        .map(s => s.text)
-        .join(' ');
+    const total = subtitles.length;
+    const indices = [
+        ...subtitles.slice(0, 30),
+        ...subtitles.slice(Math.floor(total * 0.4), Math.floor(total * 0.4) + 25),
+        ...subtitles.slice(Math.floor(total * 0.75), Math.floor(total * 0.75) + 25),
+    ];
+    const sample = indices.map(s => s.text).join(' ');
 
     const system = `Eres un asistente de localización. Analiza el fragmento y devuelve SOLO este JSON:
 
@@ -28,7 +31,7 @@ Máximo 30 términos. Si no hay términos relevantes, devuelve "glossary": [].`;
                 { role: 'system', content: system },
                 { role: 'user', content: `Transcripción:\n${sample}` }
             ],
-            { jsonMode: true, temperature: 0.1 }
+            { schema: true, temperature: 0.1 }
         );
         const data = JSON.parse(raw);
         return {
@@ -83,6 +86,11 @@ ${glossarySection}${speakerSection}
 8. PROHIBIDO inventar, inferir o completar contenido que no esté explícitamente en <TRADUCIR>.
 9. En la salida, ELIMINA las etiquetas de hablante (A:, B:…). El SRT final no debe contenerlas.
 10. Si un bloque contiene dos hablantes distintos, sepáralos así: "— frase hablante 1\\n— frase hablante 2".
+11. Usa signos de apertura españoles (¿, ¡) en preguntas y exclamaciones.
+12. Evita calcos del inglés: usa expresiones idiomáticas naturales en español.
+13. Evita gerundios encadenados (ej: 'estaba siendo llevado' → 'lo llevaban').
+14. Normaliza comillas: usa «» en lugar de \\"\\" para citas largas.
+15. Usa contracciones naturales del español: 'del' en vez de 'de el', 'al' en vez de 'a el'.
 
 ━━━ FORMATO DE RESPUESTA ━━━
 Responde SOLO con JSON válido, sin texto adicional, sin markdown:
@@ -106,8 +114,11 @@ Salida esperada:
  */
 function buildUserPrompt(batch, context) {
     const expectedIndices = batch.map(s => s.index).join(', ');
+    // En buildUserPrompt, cambiar el formato del bloque CONTEXTO:
     const ctxBlock = context.length
-        ? `<CONTEXTO>\n${context.map(s => `${s.index}: ${s.translatedText}`).join('\n')}\n</CONTEXTO>\n\n`
+        ? `<CONTEXTO>\n${context.map(s =>
+            `${s.index} [orig]: ${s.protectedText}\n${s.index} [trad]: ${s.translatedText}`
+        ).join('\n')}\n</CONTEXTO>\n\n`
         : '';
 
     const inputBlock = batch.map(s => `${s.index}: ${s.protectedText}`).join('\n');

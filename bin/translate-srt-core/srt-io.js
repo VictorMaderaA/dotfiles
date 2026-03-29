@@ -35,8 +35,17 @@ function parseSRT(raw) {
  */
 function buildSRT(subs) {
     return subs
-        .map(s => `${s.index}\n${s.timestamp}\n${s.text}`)
+        .map(s => `${s.index}\n${s.timestamp}\n${postProcessText(s.text)}`)
         .join('\n\n') + '\n';
 }
 
+function postProcessText(text) {
+    return text
+        .replace(/\.\.\./g, '…')          // elipsis tipográfica
+        .replace(/  +/g, ' ')              // espacios dobles
+        .replace(/\?{2,}/g, '?')           // colapsa ?? → ?
+        .replace(/!{2,}/g, '!')            // colapsa !! → !
+        .replace(/^([—–]\s*)/gm, '— ')    // normalizar guión de diálogo
+        .trim();
+}
 module.exports = { parseSRT, buildSRT };

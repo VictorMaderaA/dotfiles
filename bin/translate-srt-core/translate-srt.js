@@ -21,7 +21,7 @@ Variables de entorno requeridas:
   OPENAI_API_KEY   → Clave de la API de OpenAI
 
 Opcionales:
-  OPENAI_MODEL     → Modelo a usar (por defecto: gpt-4o-mini)
+  OPENAI_MODEL     → Modelo a usar (por defecto: gpt-4o)
   TARGET_VARIANT   → Variante de español: es-ES, es-MX, etc. (por defecto: es-ES)
 `);
 }

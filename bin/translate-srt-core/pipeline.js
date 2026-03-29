@@ -143,7 +143,6 @@ async function translateSrtFile(inputFile, outputFile, jsonPath = null) {
     // ── FASE 5: Traducción ────────────────────────────────────────────────────
     const resultMap = new Map();
     let contextBuffer = [];
-    let fallbackCount = 0;
 
     for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
@@ -163,7 +162,7 @@ async function translateSrtFile(inputFile, outputFile, jsonPath = null) {
                             {role: 'system', content: systemPrompt},
                             {role: 'user', content: userPrompt},
                         ],
-                        {jsonMode: true}
+                        {schema: true}
                     );
 
                     const parsed = JSON.parse(raw);
@@ -201,14 +200,19 @@ async function translateSrtFile(inputFile, outputFile, jsonPath = null) {
             for (const sub of batch) {
                 if (!resultMap.has(sub.index)) {
                     resultMap.set(sub.index, sub.text);
-                    fallbackCount++;
                 }
             }
         }
 
         contextBuffer = batch
             .slice(-CONFIG.contextSize)
-            .map(s => ({...s, translatedText: resultMap.get(s.index) ?? s.text}));
+            .map(s => ({
+                ...s,
+                translatedText: restoreTags(
+                    resultMap.get(s.index) ?? s.text,
+                    tagMaps.get(s.index)
+                )
+            }));
 
         console.log('✅');
 
@@ -258,7 +262,7 @@ async function validateAndFillBatch(batch, translations, systemPrompt, resultMap
 
     for (const sub of batch) {
         const text = translations[String(sub.index)];
-        const {ok, reason} = validateSubtitleText(sub.text, text);
+        const {ok, reason} = validateSubtitleText(sub.protectedText, text);
 
         if (ok) {
             resultMap.set(sub.index, text);
@@ -284,7 +288,7 @@ async function translateBatchIndividually(subs, systemPrompt, resultMap) {
                         {role: 'system', content: systemPrompt},
                         {role: 'user', content: buildSinglePrompt(sub)},
                     ],
-                    {jsonMode: true}
+                    {schema: true}
                 );
                 const text = (JSON.parse(raw).translations ?? {})[String(sub.index)];
                 if (text) {

@@ -115,6 +115,8 @@ function shouldSplitBefore(words, idx, currentText, blockStart) {
     // Fin de frase con contenido suficiente → corte natural
     const prevWord = prev.word.trim();
     if (/[.!?]$/.test(prevWord) && currentText.length > 20) return true;
+    if (/[,;]$/.test(prevWord) && currentText.length > 30) return true;
+
 
     return false;
 }
@@ -185,6 +187,40 @@ function buildBlocksFromWords(words) {
     }
 
     return blocks;
+}
+
+/**
+ * Fusiona bloques con duración inferior a STANDARDS.minDurationSec
+ * con el bloque adyacente más corto.
+ */
+function mergeShortBlocks(blocks) {
+    if (blocks.length <= 1) return blocks;
+
+    const working = blocks.map(b => ({ ...b })); // copia defensiva
+    const result = [];
+
+    for (let i = 0; i < working.length; i++) {
+        const block = working[i];
+        const duration = block.end - block.start;
+
+        if (duration < STANDARDS.minDurationSec && result.length > 0) {
+            // Fusionar con el bloque anterior
+            const prev = result[result.length - 1];
+            prev.end = block.end;
+            prev.text = formatSubtitleText(`${prev.text} ${block.text}`.trim());
+        } else if (duration < STANDARDS.minDurationSec && i + 1 < working.length) {
+            // Fusionar con el siguiente (primer bloque es demasiado corto)
+            working[i + 1] = {
+                ...working[i + 1],
+                start: block.start,
+                text: formatSubtitleText(`${block.text} ${working[i + 1].text}`.trim()),
+            };
+        } else {
+            result.push({ ...block });
+        }
+    }
+
+    return result;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -261,7 +297,7 @@ function computeStats(subtitles) {
  * @param {number}      margin       - Tolerancia en segundos al buscar palabras
  * @returns {object[]}               - Uno o más bloques con timestamps refinados
  */
-function resegmentBlock(originalSub, allWords, margin = 0.4) {
+function resegmentBlock(originalSub, allWords, margin = 0.4, usedWordIndices = new Set()) {
     const [startTs, endTs] = originalSub.timestamp.split(' --> ');
     const origStart = parseTimestamp(startTs);
     const origEnd   = parseTimestamp(endTs);
@@ -269,12 +305,15 @@ function resegmentBlock(originalSub, allWords, margin = 0.4) {
     const winStart = Math.max(0, origStart - margin);
     const winEnd   = origEnd + margin;
 
-    const words = allWords.filter(w =>
-        typeof w.start === 'number' &&
-        typeof w.end   === 'number' &&
-        w.start >= winStart &&
-        w.end   <= winEnd
-    );
+    const words = allWords
+        .map((w, i) => ({ ...w, _idx: i }))
+        .filter(w =>
+            !usedWordIndices.has(w._idx) &&
+            typeof w.start === 'number' &&
+            typeof w.end   === 'number' &&
+            w.start >= winStart &&
+            w.end   <= winEnd
+        );
 
     // Sin palabras en la ventana → conservar bloque original sin cambios
     if (words.length === 0) return [{ ...originalSub }];
@@ -286,10 +325,11 @@ function resegmentBlock(originalSub, allWords, margin = 0.4) {
         return [{ ...originalSub }];
     }
 
-    const rawBlocks = buildBlocksFromWords(words);
-
-    // Si no hay ganancia real, conservar original
+    const rawBlocks = mergeShortBlocks(buildBlocksFromWords(words));
     if (rawBlocks.length <= 1 && words.length < 3) return [{ ...originalSub }];
+
+    // Marcar palabras como consumidas solo si el bloque aporta valor real
+    words.forEach(w => usedWordIndices.add(w._idx));
 
     return rawBlocks.map((block, i) => {
         // Clamp: el primer sub-bloque no puede empezar antes del bloque original,
@@ -326,8 +366,9 @@ function resegmentFromJson(jsonPath, originalSubs) {
 
     // Resegmentar bloque a bloque, respetando los anclajes temporales del SRT original
     const allBlocks = [];
+    const usedWordIndices = new Set();
     for (const sub of originalSubs) {
-        const blocks = resegmentBlock(sub, words);
+        const blocks = resegmentBlock(sub, words, 0.4, usedWordIndices);
         allBlocks.push(...blocks);
     }
 

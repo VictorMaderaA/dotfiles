@@ -12,22 +12,23 @@
 
 const CONFIG = {
     // Modelo y API
-    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    model: process.env.OPENAI_MODEL || 'gpt-4o',
     apiKeyEnvVar: 'OPENAI_API_KEY',
 
     // Procesamiento de lotes
     maxTokensPerBatch: 600,
     maxSubsPerBatch: 20,
-    contextSize: 6,
+    contextSize: 10,
     delayMs: 700,
     maxOutputTokens: 2500,
+    temperature: 0.1,
 
     // Reintentos
     maxBatchRetries: 3,
     maxSingleRetries: 2,
 
     // Validación por subtítulo
-    maxRatioExpansion: 4.5,
+    maxRatioExpansion: 3,
     minRatioExpansion: 0.15,
 
     // Idioma de salida
@@ -35,7 +36,7 @@ const CONFIG = {
     targetVariant: process.env.TARGET_VARIANT || 'es-ES', // p.ej. 'es-ES', 'es-MX'
 
     // Estricto: si demasiados fallbacks, marcar fallo global
-    strictFallbackThreshold: 0.15 // 15% de subs en fallback → error
+    strictFallbackThreshold: 0.08 // 15% de subs en fallback → error
 };
 
 module.exports = { CONFIG };

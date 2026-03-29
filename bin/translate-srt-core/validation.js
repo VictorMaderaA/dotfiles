@@ -37,6 +37,17 @@ function validateSubtitleText(original, translated) {
     if (original.trim().length > 3 && ratio < CONFIG.minRatioExpansion) {
         return { ok: false, reason: `contracción excesiva (${ratio.toFixed(1)}x)` };
     }
+    // ¿El texto quedó sin traducir?
+    // Fix: excluir de la comprobación si el texto es corto o no contiene letras
+    const hasTranslatableContent = /[a-zA-Z]{3,}/.test(original.trim());
+    const normalize = t => t.trim().replace(/\s+/g, ' ');
+    if (hasTranslatableContent && normalize(translated) === normalize(original)) {
+        return { ok: false, reason: 'texto idéntico al original (sin traducir)' };
+    }
+    // ¿Placeholder sin restaurar?
+    if (/__T\d+__/.test(translated)) {
+        return { ok: false, reason: 'placeholder __Tn__ sin restaurar' };
+    }
     return { ok: true };
 }
 

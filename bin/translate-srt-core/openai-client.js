@@ -22,9 +22,27 @@ function callOpenAI(messages, opts = {}) {
         const body = JSON.stringify({
             model: CONFIG.model,
             messages,
-            temperature: opts.temperature ?? 0.2,
+            temperature: opts.temperature ?? CONFIG.temperature ?? 0.2,
             max_tokens: opts.maxTokens ?? CONFIG.maxOutputTokens,
-            ...(opts.jsonMode && { response_format: { type: 'json_object' } })
+            ...(opts.schema && {
+                response_format: {
+                    type: 'json_schema',
+                    json_schema: {
+                        name: 'translations',
+                        strict: true,
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                translations: {
+                                    type: 'object',
+                                    additionalProperties: { type: 'string' }
+                                }
+                            },
+                            required: ['translations']
+                        }
+                    }
+                }
+            })
         });
 
         const req = https.request({

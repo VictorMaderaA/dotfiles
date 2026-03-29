@@ -12,14 +12,14 @@ function estimateTokens(text) {
 /**
  * Divide subtítulos en lotes adaptativos.
  */
-function buildAdaptiveBatches(subtitles, maxTokens = CONFIG.maxTokensPerBatch, maxSubs = CONFIG.maxSubsPerBatch) {
-    const batches = [];
+function buildAdaptiveBatches(subtitles, maxTokens = CONFIG.maxTokensPerBatch, maxSubs = CONFIG.maxSubsPerBatch) {    const batches = [];
     let current = [];
     let tokens = 0;
+    const effectiveMax = Math.floor(maxTokens * 0.6);
 
     for (const sub of subtitles) {
         const subTokens = estimateTokens(`${sub.index}: ${sub.protectedText}\n`);
-        const tokensFull = tokens + subTokens > maxTokens;
+        const tokensFull = tokens + subTokens > effectiveMax;
         const subsFull = current.length >= maxSubs;
 
         if (current.length > 0 && (tokensFull || subsFull)) {
