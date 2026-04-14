@@ -13,7 +13,7 @@ export HF_TOKEN="REMOVED"   # HuggingFace — requerido para diarización
 #     BÓRRALO antes de hacer push al repo público.
 
 export WHISPER_MODEL="${WHISPER_MODEL:-large-v3}"      # Modelo WhisperX (large-v3 por defecto)
-export WHISPER_OUTPUT_DIR="${WHISPER_OUTPUT_DIR:-./subtitles}"  # Directorio de salida por defecto
+export WHISPER_OUTPUT_DIR="${WHISPER_OUTPUT_DIR:-./}"  # Directorio de salida por defecto
 
 whisper_subs() {
   local input="$1"
