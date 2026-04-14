@@ -1,2 +1,6 @@
 .idea
 .dotfiles_backup
+
+# Local environment variables
+dotfiles/shell/env.local
+.env.local

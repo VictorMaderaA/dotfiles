@@ -4,6 +4,15 @@ export ZSH_CUSTOM="$HOME/.config/zsh"
 # Source common aliases
 [[ -f ~/.shell_aliases ]] && source ~/.shell_aliases
 
+# ============================================================================
+# Load local environment variables (~/.env.local)
+# This file is ignored by git and can contain sensitive information
+# ============================================================================
+
+if [[ -f ~/.env.local ]]; then
+    source ~/.env.local
+fi
+
 # Source starship prompt
 eval "$(starship init zsh)"
 

@@ -105,6 +105,15 @@ if [ -f ~/.bash_aliases ]; then
     . ~/.bash_aliases
 fi
 
+# ============================================================================
+# Load local environment variables (~/.env.local)
+# This file is ignored by git and can contain sensitive information
+# ============================================================================
+
+if [ -f ~/.env.local ]; then
+    . ~/.env.local
+fi
+
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
 # sources /etc/bash.bashrc).

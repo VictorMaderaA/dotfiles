@@ -13,7 +13,7 @@
 const CONFIG = {
     // Modelo y API
     model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
-    apiKeyEnvVar: 'OPENAI_API_KEY',
+    apiKeyEnvVar: process.env.OPENAI_API_KEY_VAR || 'OPENAI_API_KEY',
 
     // Procesamiento de lotes
     maxTokensPerBatch: 600,
