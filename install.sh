@@ -224,6 +224,15 @@ df_dotfiles_link() {
                 done
                 shopt -u dotglob
             else
+                # Verificar si el symlink ya existe y apunta al origen correcto
+                if [[ -L "$tgt" ]]; then
+                    local current_source=$(readlink "$tgt")
+                    if [[ "$current_source" == "$src" ]]; then
+                        log_info "El archivo ya está correctamente ligado: $tgt -> $src"
+                        return 0
+                    fi
+                fi
+
                 # Backup si existe
                 if [[ "$NO_BACKUP" != "1" ]] && [[ -e "$tgt" ]]; then
                     backup_if_exists "$tgt"
