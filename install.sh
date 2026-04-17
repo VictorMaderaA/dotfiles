@@ -239,7 +239,7 @@ df_dotfiles_link() {
                 fi
                 mkdir -p "$(dirname "$tgt")"
                 ln -sf "$src" "$tgt"
-                log_debug "Symlink creado: $src -> $tgt"
+                log_success "Symlink creado: $src -> $tgt"
             fi
         }
 
