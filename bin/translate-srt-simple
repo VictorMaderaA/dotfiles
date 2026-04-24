@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Obtener el directorio del script
+DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Llamar al script de Node real
+node "$DIR/translate-srt-simple-core/cli.js" "$@"
