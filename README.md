@@ -1,341 +1,100 @@
-# README - Estructura Recomendada de Dotfiles
+# dotfiles
 
-## 🎯 Objetivo
+Entorno de desarrollo profesional, modular y auto-adaptable para Linux (Ubuntu, Fedora, Arch). Detecta automáticamente el entorno y despliega solo lo relevante.
 
-Transformar tu repositorio de dotfiles en una solución **profesional, escalable y auto-adaptable** que:
-- ✅ Detecte automáticamente el entorno (Desktop, WSL, Server)
-- ✅ Instale solo lo relevante para cada ambiente
-- ✅ Mantenga configuraciones compartidas y específicas
-- ✅ Sea fácil de expandir y mantener
-- ✅ Tenga control de versiones de todas las configuraciones
+> **Para agentes de código (Claude Code, Copilot, Cursor, etc.):** el archivo de referencia principal es [`CLAUDE.md`](./CLAUDE.md).
 
 ---
 
-## 📁 Estructura Nueva vs Antigua
-
-### Problemas con estructura plana/desorganizada:
-```
-dotfiles/
-├── install.sh (GIGANTE, difícil mantener)
-├── .zshrc
-├── .gitconfig
-├── .tmux.conf
-└── ... (todo mezclado)
-```
-
-**Problemas:**
-- Difícil de leer y mantener
-- Imposible activar/desactivar módulos
-- Difícil expandir
-- Sin separación entre entornos
-
-### Solución: Estructura Modular
-```
-dotfiles/
-├── scripts/lib/          # Funciones reutilizables
-├── scripts/core/         # Configuración núcleo
-├── scripts/installers/   # Instaladores modulares
-├── scripts/hooks/        # Post-instalación
-├── dotfiles/             # Archivos de config (symlinks)
-├── environments/         # Configs por entorno
-├── config/               # Archivos de configuración
-├── docs/                 # Documentación
-├── tests/                # Validación
-└── install.sh            # Entry point simple
-```
-
----
-
-## 🔄 Flujo de Instalación
-
-```
-1. ./install.sh
-   ↓
-2. Detectar entorno (detect_environment.sh)
-   ├─ ¿WSL? → true/false
-   ├─ ¿Desktop? → true/false
-   └─ ¿Server? → true/false
-   ↓
-3. Instalar categorías (en orden):
-   ├─ Base packages (siempre)
-   ├─ Shell tools (siempre)
-   ├─ Dev tools (siempre)
-   ├─ Docker (siempre)
-   ├─ Desktop apps (SOLO si IS_DESKTOP)
-   └─ Server tools (SOLO si IS_SERVER)
-   ↓
-4. Crear symlinks (dotfiles)
-   ↓
-5. Configurar shell
-   ↓
-6. Ejecutar hooks post-install
-   ↓
-7. Validar instalación
-```
-
----
-
-## 🚀 Cómo Migrar tu Proyecto
-
-### Paso 1: Preparar Estructura
+## Instalación
 
 ```bash
+git clone https://github.com/VictorMaderaA/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-
-# Crear carpetas
-mkdir -p scripts/{lib,core,installers,hooks}
-mkdir -p dotfiles/{shell,git,ssh,editors,tools,system}
-mkdir -p environments/{desktop,server,wsl,common}
-mkdir -p docs tests config templates
-```
-
-### Paso 2: Mover Archivos de Configuración
-
-```bash
-# Mover tus dotfiles existentes
-mv ~/.zshrc dotfiles/shell/.zshrc
-mv ~/.bashrc dotfiles/shell/.bashrc
-mv ~/.gitconfig dotfiles/git/.gitconfig
-mv ~/.tmux.conf dotfiles/tools/.tmux.conf
-# etc...
-```
-
-### Paso 3: Copiar Scripts de Librería
-
-Copia estos scripts a `scripts/lib/`:
-1. `detect_environment.sh` - Detección automática de entorno
-2. `logging.sh` - Sistema de logging
-3. `package_manager.sh` - Abstracción de apt/pacman/yum
-4. `backup.sh` - Backup de archivos existentes
-
-### Paso 4: Crear install.sh Principal
-
-Copia el archivo `install.sh` proporcionado como punto de entrada.
-
-### Paso 5: Modularizar Instaladores
-
-Extrae tu script de instalación en módulos bajo `scripts/installers/`:
-- `base.sh` - Herramientas base
-- `development.sh` - Dev tools
-- `desktop.sh` - Apps GUI
-- `terminal.sh` - Terminal tools
-- `docker.sh` - Docker
-- `languages.sh` - Lenguajes de programación
-- `server.sh` - Configuración de servidor
-
-### Paso 6: Crear Configuraciones por Entorno
-
-En `environments/{desktop,server,wsl,common}/`:
-- Archivos `.conf` con configuraciones
-- Scripts específicos del entorno
-
----
-
-## 💡 Ejemplos de Uso
-
-### Instalación en Desktop Ubuntu:
-```bash
 ./install.sh
-# Detectará: Desktop ✓, instala todo incluyendo GUI apps
 ```
 
-### Instalación en WSL:
-```bash
-./install.sh
-# Detectará: WSL ✓, salta GUI apps
-```
+### Opciones
 
-### Instalación en Server:
-```bash
-./install.sh
-# Detectará: Server ✓, instala server tools
-```
+| Flag | Efecto |
+|------|--------|
+| `--verbose` | Información detallada durante la instalación |
+| `--debug` | Muestra cada comando ejecutado |
+| `--no-backup` | No hacer backup de archivos existentes |
+| `--no-tui` | Sin interfaz interactiva |
+| `--env <entorno>` | Fuerza entorno: `wsl` \| `desktop` \| `server` |
 
-### Instalación en modo debug:
-```bash
-./install.sh --debug --verbose
-# Muestra cada paso
-```
+---
 
-### Forzar entorno (para testing):
-```bash
-./install.sh --env desktop
-./install.sh --env wsl
-./install.sh --env server
-```
+## Estructura
 
-### Sin backup:
-```bash
-./install.sh --no-backup
+```
+dotfiles/
+├── install.sh              # Entry point
+├── config/
+│   └── symlinks.conf       # Mapeo origen:destino de todos los symlinks
+├── scripts/
+│   ├── lib/                # Librerías: logging, package_manager, backup, detect_environment
+│   └── installers/         # Módulos: base, terminal, development, docker, desktop, server
+├── dotfiles/               # Archivos de configuración (shell, git, ssh, editors, tools)
+├── environments/           # Variables y configs por entorno
+├── bin/                    # Herramientas ejecutables (translate-srt, web tools)
+└── tests/                  # Dockerfiles para probar en múltiples distros
 ```
 
 ---
 
-## 📦 Archivos Clave Proporcionados
+## Flujo de instalación
 
-### 1. **detect_environment.sh**
-Detecta automáticamente:
-- ¿Es WSL?
-- ¿Es Desktop?
-- ¿Es Server?
-- ¿Qué distribución?
-
-Exporta flags globales que se usan en todo el sistema.
-
-### 2. **logging.sh**
-Sistema consistente de logging con:
-- Mensajes de info (ℹ)
-- Mensajes de éxito (✓)
-- Mensajes de error (✗)
-- Mensajes de advertencia (⚠)
-- Debug (🐛)
-- Secciones (━━━━)
-
-### 3. **package_manager.sh**
-Abstracción que funciona con:
-- apt (Debian/Ubuntu)
-- pacman (Arch)
-- yum (RedHat)
-
-Funciones:
-- `pkg_install` - Instalar paquete
-- `pkg_install_if_needed` - Instalar si no existe
-- `pkg_is_installed` - Verificar si está instalado
-- `pkg_update` - Actualizar cache
-
-### 4. **backup.sh**
-Gestión de backups:
-- `backup_if_exists` - Hacer backup automático
-- `restore_backup` - Restaurar desde backup
-- `list_backups` - Listar backups disponibles
-- Timestamp automático de backups
-
-### 5. **install.sh**
-Script principal que:
-- Orquesta todo el flujo
-- Detecta entorno
-- Llama instaladores en orden
-- Crea symlinks
-- Valida instalación
-- Resumen final
-
----
-
-## 🎨 Características de la Solución
-
-### ✅ Modular
-- Cada componente es independiente
-- Fácil de añadir/remover
-- Reutilizable en otros proyectos
-
-### ✅ Escalable
-- Nuevo entorno? Solo añade carpeta
-- Nuevo installer? Solo crea script
-- Nuevo dotfile? Solo copia y añade symlink
-
-### ✅ Robusto
-- Detección automática
-- Backup automático
-- Validación post-instalación
-- Logging detallado
-
-### ✅ Flexible
-- Múltiples entornos soportados
-- Configuración centralizada
-- Override manual de entorno
-- Sin backup si lo prefieres
-
-### ✅ Profesional
-- Código limpio y bien documentado
-- Manejo de errores
-- Validación de requisitos
-- Tests incluidos
-
----
-
-## 📝 Siguientes Pasos
-
-1. **Organiza tu repo** con la nueva estructura
-2. **Copia los scripts** de libería proporcionados
-3. **Mueve tus dotfiles** a `dotfiles/`
-4. **Modulariza instaladores** si tienes script monolítico
-5. **Prueba** en los 3 entornos (Desktop, WSL, Server)
-6. **Añade documentación** específica de tu setup
-
----
-
-## 🛠️ Scripts Adicionales Útiles
-
-### test_environment.sh
-Valida que la detección funcionó correctamente
-
-### test_symlinks.sh
-Verifica que todos los symlinks se crearon
-
-### test_packages.sh
-Comprueba que los paquetes se instalaron
-
----
-
-## 📚 Documentación Recomendada
-
-Crea estos archivos en `docs/`:
-
-1. **INSTALL.md** - Guía de instalación paso a paso
-2. **ENVIRONMENTS.md** - Diferencias por entorno
-3. **CUSTOMIZATION.md** - Cómo customizar para tu setup
-4. **TROUBLESHOOTING.md** - Solución de problemas comunes
-5. **ARCHITECTURE.md** - Explicación de la arquitectura
-
----
-
-## 🎁 Bonus
-
-### Alias para actualizar dotfiles
-```bash
-# En tu .zshrc/.bashrc
-alias dotfiles-update='cd ~/dotfiles && git pull && ./install.sh'
 ```
-
-### Git hook para auto-push
-```bash
-# .git/hooks/post-commit
-git push origin master
-```
-
-### Cron job para backup
-```bash
-# Backup automático cada semana
-0 0 * * 0 ~/dotfiles/scripts/lib/cleanup_old_backups.sh
+install.sh
+  → Detecta entorno (IS_WSL / IS_DESKTOP / IS_SERVER)
+  → Ejecuta instaladores en orden (base → terminal → development → docker → desktop/server)
+  → Crea symlinks según config/symlinks.conf
+  → Inicializa configs locales (.env.local, ssh/config.local)
+  → Backup automático de archivos previos en .dotfiles_backup/
 ```
 
 ---
 
-## 📞 Soporte
+## Herramientas configuradas
 
-Si tienes problemas:
-
-1. Ejecuta con `--debug`:
-   ```bash
-   ./install.sh --debug --verbose
-   ```
-
-2. Revisa logs en `.dotfiles_backup/`
-
-3. Restaura desde backup si es necesario:
-   ```bash
-   bash scripts/lib/restore_backup.sh
-   ```
+- **Shell**: Zsh + Starship + Tmux + Nerd Fonts
+- **Git**: Aliases, SSH keys, configuración por repo
+- **Dev**: Pyenv, NVM, Neovim, Git-flow, AWS CLI, Pipx, Bitwarden CLI
+- **DevOps**: Docker (con soporte WSL), Tailscale
+- **CLI**: bat, ripgrep, fzf, jq
 
 ---
 
-## 🎉 ¡Listo!
+## Configuración local (no versionada)
 
-Con esta estructura tendrás un dotfiles:
-- **Profesional** ✓
-- **Escalable** ✓
-- **Mantenible** ✓
-- **Robusto** ✓
-- **Flexible** ✓
+Dos archivos privados que el instalador inicializa pero no versiona:
 
-¡Que disfrutes de tu nuevo setup!
+- `dotfiles/shell/.env.local` — tokens y variables privadas
+- `dotfiles/ssh/config.local` — hosts SSH privados (generado desde `config.local.template`)
+
+---
+
+## Tests
+
+```bash
+docker build -f tests/Dockerfile.ubuntu -t dotfiles-ubuntu . && docker run dotfiles-ubuntu
+docker build -f tests/Dockerfile.fedora -t dotfiles-fedora . && docker run dotfiles-fedora
+docker build -f tests/Dockerfile.arch   -t dotfiles-arch   . && docker run dotfiles-arch
+```
+
+---
+
+## Añadir nuevo dotfile
+
+1. Colocar el archivo en `dotfiles/<categoría>/`
+2. Agregar la entrada en `config/symlinks.conf` con formato `origen:destino`
+3. Ejecutar `./install.sh` o crear el symlink manualmente
+
+## Añadir nuevo instalador
+
+1. Crear `scripts/installers/<nombre>.sh`
+2. Sourcea las librerías de `scripts/lib/` y usa `pkg_install` para instalar paquetes
+3. Verificar `IS_WSL`/`IS_DESKTOP`/`IS_SERVER` si aplica solo a ciertos entornos
+4. Llamarlo desde `install.sh`
