@@ -4,3 +4,9 @@
 # Local environment variables
 dotfiles/shell/env.local
 .env.local
+
+# AI Agents
+.junie/
+.claude/
+.kiro/
+.codex/
