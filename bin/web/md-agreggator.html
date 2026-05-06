@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Context Aggregator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.0.3/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --accent: #0f3460;
+    --highlight: #e94560;
+    --text: #e0e0e0;
+    --text-muted: #8892b0;
+    --border: #233554;
+    --radius: 8px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ccd6f6;
+    letter-spacing: 0.02em;
+  }
+
+  header h1 span { color: var(--highlight); }
+
+  header .version-badge {
+    font-size: 0.7rem;
+    background: var(--accent);
+    color: var(--text-muted);
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Main Layout ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── Left Panel ── */
+  .left-panel {
+    width: 300px;
+    min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .drop-zone {
+    margin: 12px 12px 6px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 22px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--bg);
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .drop-zone:hover { border-color: var(--highlight); background: rgba(233,69,96,0.04); }
+  .drop-zone.dragover { border-color: var(--highlight); background: rgba(233,69,96,0.08); border-style: solid; }
+  .drop-zone.populated { padding: 12px 14px; border-style: solid; border-color: var(--accent); }
+
+  .drop-icon { font-size: 1.8rem; margin-bottom: 6px; line-height: 1; }
+  .drop-zone p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+  .drop-zone strong { color: var(--highlight); font-weight: 600; }
+
+  #fileInput { display: none; }
+
+  .file-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .file-list-header .section-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .btn-clear {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 3px 9px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .btn-clear:hover { border-color: var(--highlight); color: var(--highlight); }
+
+  .file-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 5px 6px;
+    min-height: 0;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    margin-bottom: 3px;
+    background: var(--bg);
+    border: 1px solid transparent;
+    transition: border-color 0.15s;
+    animation: slideIn 0.18s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .file-item:hover { border-color: var(--accent); }
+
+  .file-ext {
+    background: var(--accent);
+    color: #a8b2d8;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    min-width: 34px;
+    text-align: center;
+    font-family: 'Fira Code', Consolas, monospace;
+    text-transform: lowercase;
+    flex-shrink: 0;
+  }
+
+  .file-info { flex: 1; min-width: 0; }
+
+  .file-name {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+
+  .file-size { font-size: 0.69rem; color: var(--text-muted); margin-top: 1px; }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.85rem;
+    line-height: 1;
+    transition: color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .btn-remove:hover { color: var(--highlight); background: rgba(233,69,96,0.12); }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .preview-header {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .preview-header .section-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .preview-header .preview-filename {
+    font-size: 0.75rem;
+    color: var(--highlight);
+    font-family: 'Fira Code', Consolas, monospace;
+    opacity: 0.8;
+  }
+
+  .preview-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 36px;
+    min-height: 0;
+  }
+
+  .preview-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    gap: 10px;
+    text-align: center;
+  }
+
+  .preview-empty .empty-icon { font-size: 2.8rem; opacity: 0.25; }
+  .preview-empty p { font-size: 0.88rem; }
+  .preview-empty small { font-size: 0.76rem; opacity: 0.6; }
+
+  /* ── Markdown Styles ── */
+  .markdown-body { max-width: 880px; margin: 0 auto; }
+
+  .markdown-body h1 {
+    font-size: 1.5rem;
+    color: #ccd6f6;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+  }
+
+  .markdown-body h2 {
+    font-size: 1rem;
+    color: #a8b2d8;
+    margin: 28px 0 10px;
+    font-weight: 600;
+  }
+
+  .markdown-body h2 code {
+    color: var(--highlight);
+    font-size: 0.95rem;
+    font-family: 'Fira Code', Consolas, monospace;
+  }
+
+  .markdown-body p {
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .markdown-body em { font-style: italic; }
+
+  .markdown-body hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .markdown-body pre {
+    background: #0d1117 !important;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 6px 0 12px;
+    font-size: 0.8rem;
+  }
+
+  .markdown-body pre code {
+    font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.8rem;
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    color: inherit;
+  }
+
+  .markdown-body :not(pre) > code {
+    background: rgba(15,52,96,0.6);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--highlight);
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 0.85em;
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .toolbar-counter {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-right: auto;
+  }
+
+  .toolbar-counter strong { color: var(--highlight); }
+
+  .btn-export {
+    background: var(--highlight);
+    color: #fff;
+    border: none;
+    padding: 7px 15px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-export:hover:not(:disabled) { background: #c73652; transform: translateY(-1px); }
+  .btn-export:active:not(:disabled) { transform: translateY(0); }
+  .btn-export:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+  }
+
+  .split-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .split-group label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .split-group input[type=number] {
+    width: 52px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 7px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    text-align: center;
+    transition: border-color 0.15s;
+  }
+
+  .split-group input[type=number]:focus {
+    outline: none;
+    border-color: var(--highlight);
+  }
+
+  /* ── Scrollbars ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #1a4a80; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>File Context <span>Aggregator</span></h1>
+  <span class="version-badge">v1.0</span>
+</header>
+
+<div class="main">
+
+  <!-- ── Left Panel ── -->
+  <div class="left-panel">
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-icon">📁</div>
+      <p>Drag &amp; drop files here</p>
+      <p>or <strong>click to browse</strong></p>
+    </div>    <input type="file" id="fileInput" multiple>
+
+    <div class="file-list-header">
+      <span class="section-label">Loaded Files</span>
+      <button class="btn-clear" id="btnClear">Clear all</button>
+    </div>    <div class="file-list" id="fileList"></div>
+  </div>
+  <!-- ── Right Panel ── -->
+  <div class="right-panel">
+    <div class="preview-header">
+      <span class="section-label">Live Preview</span>
+      <span class="preview-filename">context.md</span>
+    </div>    <div class="preview-content" id="previewContent">
+    <div class="preview-empty">
+      <div class="empty-icon">📄</div>
+      <p>Load files to preview the generated Markdown</p>
+      <small>Supports .ts · .js · .html · .css · .json · .py · .yaml and more</small>
+    </div>    </div>  </div>
+</div>
+
+<!-- ── Toolbar ── -->
+<div class="toolbar">
+  <div class="toolbar-counter" id="counter">No files loaded</div>
+  <button class="btn-export" id="btnExportSingle" disabled>⬇ Export Single .md</button>
+  <div class="toolbar-divider"></div>
+  <div class="split-group">
+    <label for="splitCount">Split into</label>
+    <input type="number" id="splitCount" value="2" min="2" max="100">
+    <label>files</label>
+    <button class="btn-export" id="btnExportParts" disabled>⬇ Export Parts</button>
+  </div></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const state = { files: [] };
+
+  // ── Extension → Language Map ───────────────────────────────────────────────
+  const EXT_LANG = {
+    ts: 'typescript', tsx: 'tsx',
+    js: 'javascript', jsx: 'jsx', mjs: 'javascript', cjs: 'javascript',
+    html: 'html', htm: 'html',
+    css: 'css', scss: 'scss', sass: 'sass', less: 'less',
+    json: 'json', json5: 'json5',
+    py: 'python', rb: 'ruby', go: 'go', rs: 'rust',
+    java: 'java', kt: 'kotlin', swift: 'swift',
+    c: 'c', cpp: 'cpp', cs: 'csharp',
+    php: 'php',
+    sh: 'bash', bash: 'bash', zsh: 'bash',
+    yaml: 'yaml', yml: 'yaml',
+    toml: 'toml', xml: 'xml', svg: 'xml',
+    md: 'markdown', mdx: 'markdown',
+    sql: 'sql', graphql: 'graphql', gql: 'graphql',
+    dockerfile: 'dockerfile',
+  };
+
+  function getLanguage(filename) {
+    const dot = filename.lastIndexOf('.');
+    if (dot === -1) return '';
+    const ext = filename.slice(dot + 1).toLowerCase();
+    // Handle special filenames like "Dockerfile"
+    if (filename.toLowerCase() === 'dockerfile') return 'dockerfile';
+    return EXT_LANG[ext] || '';
+  }
+
+  // ── Common Ancestor ────────────────────────────────────────────────────────
+  function getCommonAncestor(files) {
+    if (files.length <= 1) return '';
+    const paths = files.map(f => f.relativePath || f.name);
+    const splitPaths = paths.map(p => {
+      const parts = p.split('/');
+      return parts.slice(0, -1); // directory segments only
+    });
+    if (splitPaths.some(p => p.length === 0)) return '';
+
+    const common = [];
+    const minLen = Math.min(...splitPaths.map(p => p.length));
+    for (let i = 0; i < minLen; i++) {
+      const seg = splitPaths[0][i];
+      if (splitPaths.every(p => p[i] === seg)) {
+        common.push(seg);
+      } else {
+        break;
+      }
+    }
+    return common.length ? common.join('/') + '/' : '';
+  }
+
+  function getRelativePath(file, ancestor) {
+    const full = file.relativePath || file.name;
+    if (ancestor && full.startsWith(ancestor)) return full.slice(ancestor.length);
+    return file.name;
+  }
+
+  // ── LPT (Longest Processing Time) Distribution ────────────────────────────
+  function distributeLPT(files, n) {
+    const sorted = [...files].sort((a, b) => b.content.length - a.content.length);
+    const buckets = Array.from({ length: n }, () => ({ files: [], size: 0 }));
+    for (const file of sorted) {
+      let minIdx = 0;
+      for (let i = 1; i < buckets.length; i++) {
+        if (buckets[i].size < buckets[minIdx].size) minIdx = i;
+      }
+      buckets[minIdx].files.push(file);
+      buckets[minIdx].size += file.content.length;
+    }
+    return buckets;
+  }
+
+  // ── Markdown Generation ────────────────────────────────────────────────────
+  function formatDateTime() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ` +
+      `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }
+
+  function buildFileBlock(file, ancestor) {
+    const relPath = getRelativePath(file, ancestor);
+    const lang = getLanguage(file.name);
+    const content = file.content.endsWith('\n') ? file.content : file.content + '\n';
+    return `## \`${relPath}\`\n\n\`\`\`${lang}\n${content}\`\`\`\n\n---\n\n`;
+  }
+
+  function generateSingleMarkdown(files) {
+    const ancestor = getCommonAncestor(files);
+    const totalSize = files.reduce((acc, f) => acc + f.content.length, 0);
+    let md = `# Project Context\n`;
+    md += `_Generated: ${formatDateTime()}_\n`;
+    md += `_Files: ${files.length} | Total size: ${(totalSize / 1024).toFixed(1)} KB_\n\n`;
+    md += `---\n\n`;
+    for (const file of files) md += buildFileBlock(file, ancestor);
+    return md;
+  }
+
+  function generatePartMarkdown(partFiles, partNum, totalParts) {
+    const ancestor = getCommonAncestor(state.files); // ancestor across ALL files
+    const partSize = partFiles.reduce((acc, f) => acc + f.content.length, 0);
+    let md = `# Project Context — Part ${partNum} of ${totalParts}\n`;
+    md += `_Generated: ${formatDateTime()}_\n`;
+    md += `_Files in this part: ${partFiles.length} | Part size: ${(partSize / 1024).toFixed(1)} KB_\n\n`;
+    md += `---\n\n`;
+    for (const file of partFiles) md += buildFileBlock(file, ancestor);
+    const fileList = partFiles.map(f => `\`${getRelativePath(f, ancestor)}\``).join(', ');
+    md += `_**Files in Part ${partNum}:** ${fileList}_\n`;
+    return md;
+  }
+
+  // ── Download Helpers ───────────────────────────────────────────────────────
+  function downloadBlob(content, filename) {
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  async function downloadSequential(items) {
+    for (let i = 0; i < items.length; i++) {
+      if (i > 0) await new Promise(r => setTimeout(r, 200));
+      downloadBlob(items[i].content, items[i].filename);
+    }
+  }
+
+  // ── File Reading ───────────────────────────────────────────────────────────
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = () => reject(new Error(`Failed to read: ${file.name}`));
+      reader.readAsText(file, 'UTF-8');
+    });
+  }
+
+  async function addFiles(fileList) {
+    const existingKeys = new Set(state.files.map(f => f.relativePath || f.name));
+    const promises = [];
+
+    for (const file of fileList) {
+      const relativePath = file.webkitRelativePath || file.name;
+      if (existingKeys.has(relativePath)) continue;
+      existingKeys.add(relativePath);
+
+      promises.push(
+        readFileAsText(file)
+          .then(content => ({ name: file.name, relativePath, content, size: file.size }))
+          .catch(err => { console.warn(err); return null; })
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const valid = results.filter(Boolean);
+    if (valid.length > 0) {
+      state.files.push(...valid);
+      render();
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function render() {
+    renderFileList();
+    renderPreview();
+    renderToolbar();
+  }
+
+  function renderFileList() {
+    const listEl   = document.getElementById('fileList');
+    const dropZone = document.getElementById('dropZone');
+
+    if (state.files.length === 0) {
+      listEl.innerHTML = '';
+      dropZone.classList.remove('populated');
+      dropZone.innerHTML = `
+          <div class="drop-icon">📁</div>
+          <p>Drag &amp; drop files here</p>          <p>or <strong>click to browse</strong></p>`;
+      return;
+    }
+
+    dropZone.classList.add('populated');
+    dropZone.innerHTML = `
+        <p style="font-size:0.78rem;color:var(--text-muted)">Drop more files to add them</p>        <p style="font-size:0.74rem">or <strong>click to browse</strong></p>`;
+
+    listEl.innerHTML = state.files.map((file, idx) => {
+      const ext    = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '—';
+      const sizeKB = file.content.length > 0
+        ? (file.content.length / 1024).toFixed(1)
+        : (file.size / 1024).toFixed(1);
+      const title  = file.relativePath !== file.name ? file.relativePath : file.name;
+
+      return `<div class="file-item">
+          <span class="file-ext">.${ext}</span>
+          <div class="file-info">            <div class="file-name" title="${escapeAttr(title)}">${escapeHtml(file.name)}</div>
+            <div class="file-size">${sizeKB} KB</div>          </div>          <button class="btn-remove" data-idx="${idx}" title="Remove file">✕</button>
+        </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('.btn-remove').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        state.files.splice(parseInt(btn.dataset.idx), 1);
+        render();
+      });
+    });
+  }
+
+  function renderPreview() {
+    const previewEl = document.getElementById('previewContent');
+
+    if (state.files.length === 0) {
+      previewEl.innerHTML = `
+          <div class="preview-empty">            <div class="empty-icon">📄</div>
+            <p>Load files to preview the generated Markdown</p>            <small>Supports .ts · .js · .html · .css · .json · .py · .yaml and more</small>          </div>`;
+      return;
+    }
+
+    const raw = generateSingleMarkdown(state.files);
+    let html;
+
+    try {
+      html = marked.parse(raw);
+    } catch {
+      // CDN fallback: show raw markdown safely
+      html = `<pre style="white-space:pre-wrap;word-break:break-word;font-size:0.8rem">${escapeHtml(raw)}</pre>`;
+    }
+
+    previewEl.innerHTML = `<div class="markdown-body">${html}</div>`;
+
+    try {
+      previewEl.querySelectorAll('pre code').forEach(block => {
+        hljs.highlightElement(block);
+      });
+    } catch { /* highlight.js CDN fallback: silently skip */ }
+  }
+
+  function renderToolbar() {
+    const counter    = document.getElementById('counter');
+    const btnSingle  = document.getElementById('btnExportSingle');
+    const btnParts   = document.getElementById('btnExportParts');
+    const splitInput = document.getElementById('splitCount');
+
+    const hasFiles  = state.files.length > 0;
+    const totalSize = state.files.reduce((acc, f) => acc + f.content.length, 0);
+
+    counter.innerHTML = hasFiles
+      ? `<strong>${state.files.length}</strong> file${state.files.length !== 1 ? 's' : ''} loaded · <strong>${(totalSize / 1024).toFixed(1)} KB</strong> total`
+      : 'No files loaded';
+
+    btnSingle.disabled = !hasFiles;
+    btnParts.disabled  = !hasFiles;
+
+    if (hasFiles) {
+      const maxSplit = Math.max(2, state.files.length);
+      splitInput.max = maxSplit;
+      if (parseInt(splitInput.value) > maxSplit) splitInput.value = maxSplit;
+    }
+  }
+
+  // ── Escape Utilities ───────────────────────────────────────────────────────
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escapeAttr(str) {
+    return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ── Event Listeners ────────────────────────────────────────────────────────
+  const dropZoneEl = document.getElementById('dropZone');
+  const fileInputEl = document.getElementById('fileInput');
+
+  dropZoneEl.addEventListener('click', () => fileInputEl.click());
+
+  dropZoneEl.addEventListener('dragenter', e => { e.preventDefault(); });
+  dropZoneEl.addEventListener('dragover',  e => {
+    e.preventDefault();
+    dropZoneEl.classList.add('dragover');
+  });
+  dropZoneEl.addEventListener('dragleave', e => {
+    if (!dropZoneEl.contains(e.relatedTarget)) dropZoneEl.classList.remove('dragover');
+  });
+  dropZoneEl.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZoneEl.classList.remove('dragover');
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+
+  fileInputEl.addEventListener('change', e => {
+    if (e.target.files.length) {
+      addFiles(e.target.files);
+      fileInputEl.value = ''; // allow re-adding removed files
+    }
+  });
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    state.files = [];
+    render();
+  });
+
+  document.getElementById('btnExportSingle').addEventListener('click', () => {
+    if (!state.files.length) return;
+    downloadBlob(generateSingleMarkdown(state.files), 'context.md');
+  });
+
+  document.getElementById('btnExportParts').addEventListener('click', async () => {
+    if (!state.files.length) return;
+    const rawN = parseInt(document.getElementById('splitCount').value) || 2;
+    const n    = Math.min(Math.max(2, rawN), state.files.length);
+
+    const buckets = distributeLPT(state.files, n);
+    const nonEmpty = buckets.filter(b => b.files.length > 0);
+    const items = nonEmpty.map((bucket, i) => ({
+      content:  generatePartMarkdown(bucket.files, i + 1, nonEmpty.length),
+      filename: `context-part-${i + 1}.md`,
+    }));
+
+    await downloadSequential(items);
+  });
+
+  // ── Configure marked ───────────────────────────────────────────────────────
+  try {
+    marked.use({ gfm: true, breaks: false });
+  } catch { /* marked CDN fallback */ }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  render();
+</script>
+</body>
+</html>

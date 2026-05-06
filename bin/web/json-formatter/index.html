@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>JSON Formatter</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #282c34; color: #abb2bf; }
+        textarea { width: 100%; height: 300px; background: #21252b; color: #98c379; border: 1px solid #3e4451; padding: 10px; margin-bottom: 10px; }
+        pre { background: #21252b; padding: 10px; border: 1px solid #3e4451; overflow: auto; min-height: 100px; }
+        button { background: #61afef; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+        button:hover { background: #528bff; }
+        .error { color: #e06c75; }
+    </style>
+</head>
+<body>
+    <h1>JSON Formatter</h1>
+    <textarea id="input" placeholder="Pega tu JSON aquí..."></textarea>
+    <br>
+    <button onclick="format()">Formatear</button>
+    <button onclick="minify()">Minificar</button>
+    <h3>Resultado:</h3>
+    <pre id="output"></pre>
+
+    <script>
+        function format() {
+            const input = document.getElementById('input').value;
+            const output = document.getElementById('output');
+            try {
+                const parsed = JSON.parse(input);
+                output.textContent = JSON.stringify(parsed, null, 4);
+                output.className = "";
+            } catch (e) {
+                output.textContent = "Error: " + e.message;
+                output.className = "error";
+            }
+        }
+        function minify() {
+            const input = document.getElementById('input').value;
+            const output = document.getElementById('output');
+            try {
+                const parsed = JSON.parse(input);
+                output.textContent = JSON.stringify(parsed);
+                output.className = "";
+            } catch (e) {
+                output.textContent = "Error: " + e.message;
+                output.className = "error";
+            }
+        }
+    </script>
+</body>
+</html>
