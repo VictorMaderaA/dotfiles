@@ -2,7 +2,9 @@
 .dotfiles_backup
 
 # Local environment variables
+dotfiles/shell/.env.local
 dotfiles/shell/env.local
+dotfiles/ssh/config.local
 .env.local
 
 # AI Agents

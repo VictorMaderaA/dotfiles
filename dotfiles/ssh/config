@@ -1,7 +1,4 @@
-Host hetzner-mercury
-    HostName FILL_ME_IN
-    User root
-    IdentityFile ~/.ssh/VictorMaderaA
+Include config.local
 
 Host qdevwebaws
     HostName qdevwebaws.quiter.com

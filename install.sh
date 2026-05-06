@@ -175,6 +175,56 @@ df_env_detect() {
 
 
 
+df_init_local_configs() {
+    log_section "Inicializando configuraciones locales"
+
+    # 1. Asegurar que existe .env.local
+    if [[ ! -f "$DOTFILES_DIR/shell/.env.local" ]]; then
+        if [[ -f "$DOTFILES_DIR/shell/env.example" ]]; then
+            cp "$DOTFILES_DIR/shell/env.example" "$DOTFILES_DIR/shell/.env.local"
+            log_success "Creado dotfiles/shell/.env.local desde env.example"
+        else
+            touch "$DOTFILES_DIR/shell/.env.local"
+            log_success "Creado dotfiles/shell/.env.local (vacío)"
+        fi
+    fi
+
+    # 2. Generar config.local desde plantilla si existe
+    if [[ -f "$DOTFILES_DIR/ssh/config.local.template" ]]; then
+        if command -v envsubst &> /dev/null; then
+            log_info "Generando config.local desde plantilla..."
+            # Usar subshell para exportar variables de .env.local sin afectar el script principal
+            (
+                # shellcheck disable=SC1091
+                set -a
+                [[ -f "$DOTFILES_DIR/shell/.env.local" ]] && source "$DOTFILES_DIR/shell/.env.local"
+                set +a
+                envsubst < "$DOTFILES_DIR/ssh/config.local.template" > "$DOTFILES_DIR/ssh/config.local"
+            )
+            log_success "Generado dotfiles/ssh/config.local correctamente"
+        else
+            log_warn "envsubst no encontrado. No se puede procesar la plantilla SSH."
+            if [[ ! -f "$DOTFILES_DIR/ssh/config.local" ]]; then
+                if [[ -f "$DOTFILES_DIR/ssh/config.local.example" ]]; then
+                    cp "$DOTFILES_DIR/ssh/config.local.example" "$DOTFILES_DIR/ssh/config.local"
+                    log_success "Fallback: Creado config.local desde ejemplo"
+                fi
+            fi
+        fi
+    else
+        # Fallback para cuando no hay plantilla (comportamiento original)
+        if [[ ! -f "$DOTFILES_DIR/ssh/config.local" ]]; then
+            if [[ -f "$DOTFILES_DIR/ssh/config.local.example" ]]; then
+                cp "$DOTFILES_DIR/ssh/config.local.example" "$DOTFILES_DIR/ssh/config.local"
+                log_success "Creado dotfiles/ssh/config.local desde config.local.example"
+            else
+                touch "$DOTFILES_DIR/ssh/config.local"
+                log_success "Creado dotfiles/ssh/config.local (vacío)"
+            fi
+        fi
+    fi
+}
+
 df_dotfiles_link() {
     log_section "Procesando symlinks desde configuración"
 
@@ -562,6 +612,7 @@ main() {
     done
 
     # Configurar
+    run_task "Configuraciones Locales" df_init_local_configs
     run_task "Symlinks" df_dotfiles_link
     run_task "Configuración Shell" df_shell_configure
     run_task "Configuración Terminal" df_terminal_configure

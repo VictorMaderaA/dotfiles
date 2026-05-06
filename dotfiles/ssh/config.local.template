@@ -1,0 +1,7 @@
+# SSH Local Configuration Template
+# This file is used to generate config.local by injecting environment variables.
+
+Host hetzner-mercury
+    HostName ${HETZNER_MERCURY_IP}
+    User root
+    IdentityFile ~/.ssh/VictorMaderaA
