@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export HF_TOKEN="REMOVED"   # HuggingFace — requerido para diarización
+export HF_TOKEN="${HF_TOKEN:-}"   # HuggingFace — requerido para diarización
 
 # whisper_subs_v2.sh
 #
