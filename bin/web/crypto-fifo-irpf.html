@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+  <title>FIFO Cripto — IRPF España</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --accent: #0f3460;
+      --highlight: #e94560;
+      --green: #4caf50;
+      --red: #e94560;
+      --text: #e0e0e0;
+      --text-muted: #a8b2d1;
+      --border: #233554;
+      --radius: 8px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    h1 span { color: var(--highlight); }
+    .subtitle { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+    label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+    input[type="number"], input[type="file"] { background: var(--accent); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: var(--radius); font-size: 0.9rem; }
+    input[type="number"] { width: 80px; }
+    button { background: var(--highlight); color: white; border: none; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.secondary { background: var(--accent); }
+    .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 40px; text-align: center; color: var(--text-muted); cursor: pointer; transition: border-color 0.2s; }
+    .drop-zone.dragover { border-color: var(--highlight); color: var(--text); }
+    .drop-zone input { display: none; }
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .stat { background: var(--accent); padding: 12px; border-radius: var(--radius); }
+    .stat .value { font-size: 1.3rem; font-weight: 700; }
+    .stat .label { font-size: 0.75rem; color: var(--text-muted); }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; position: sticky; top: 0; background: var(--surface); }
+    .table-wrap { max-height: 400px; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .alert { background: #3d2020; border: 1px solid #e9456044; color: #ffaaaa; padding: 8px 12px; border-radius: var(--radius); font-size: 0.8rem; margin-top: 8px; }
+    .alert-info { background: #1a2a3e; border-color: #4caf5044; color: #aaffaa; }
+    .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    #results { display: none; }
+    .fx-section { margin-top: 12px; }
+    .fx-section summary { cursor: pointer; color: var(--text-muted); font-size: 0.8rem; }
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+      .drop-zone { padding: 24px 16px; }
+      table { font-size: 0.75rem; }
+      th, td { padding: 6px 4px; white-space: nowrap; }
+      .stat .value { font-size: 1.1rem; }
+      .actions { flex-direction: column; }
+      .actions button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>FIFO Cripto — <span>IRPF España</span></h1>
+  <p class="subtitle">Calculadora FIFO (art. 37.2 LIRPF) para ganancias/pérdidas patrimoniales desde CSV de Binance</p>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="year">Año fiscal</label>
+        <input type="number" id="year" value="2025" min="2015" max="2030">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="btnCalc" disabled onclick="calculate()">Calcular FIFO</button>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Zona para cargar archivo CSV de Binance">
+        <p>Arrastra aquí el CSV de Binance (Asset Transaction History)<br><small>o haz clic para seleccionar</small></p>
+        <input type="file" id="fileInput" accept=".csv">
+      </div>
+      <div id="fileInfo" style="margin-top:8px;font-size:0.8rem;color:var(--text-muted)"></div>
+    </div>
+    <details class="fx-section">
+      <summary>Tipos de cambio EUR/USD (opcional — CSV diario del BCE)</summary>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:8px 0">Si no cargas nada, se usa el tipo medio anual del BCE. Para máxima precisión, descarga el CSV diario desde <a href="https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip" style="color:var(--highlight)">ecb.europa.eu</a>.</p>
+      <input type="file" id="fxFileInput" accept=".csv" style="font-size:0.8rem">
+      <div id="fxInfo" style="margin-top:4px;font-size:0.75rem;color:var(--text-muted)"></div>
+    </details>
+  </div>
+
+  <div id="results">
+    <div class="card">
+      <div class="summary" id="summaryGrid"></div>
+      <div id="alerts"></div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:0.9rem;margin-bottom:12px">Detalle de operaciones</h3>
+      <div class="table-wrap">
+        <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+      </div>
+      <div class="actions">
+        <button onclick="downloadCSV()">Descargar CSV detalle</button>
+        <button class="secondary" onclick="downloadTXT()">Descargar resumen TXT</button>
+        <button class="secondary" onclick="copyTXT(this)">📋 Copiar resumen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Tipos de cambio medios anuales EUR/USD del BCE ──────────────────────────
+const FX_EUR_USD_ANNUAL = {
+  2015: 1.1095, 2016: 1.1069, 2017: 1.1297, 2018: 1.1810,
+  2019: 1.1195, 2020: 1.1422, 2021: 1.1827, 2022: 1.0530,
+  2023: 1.0813, 2024: 1.0818, 2025: 1.0856, 2026: 1.09
+};
+
+let csvData = null;
+let fxDaily = null; // Map: "YYYY-MM-DD" -> EUR/USD rate
+let calcResults = null;
+let calcYear = 2025;
+
+// ─── File handling ───────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fxFileInput = document.getElementById('fxFileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+fxFileInput.addEventListener('change', e => { if (e.target.files[0]) handleFxFile(e.target.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    csvData = e.target.result;
+    document.getElementById('fileInfo').textContent = `✓ ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    document.getElementById('btnCalc').disabled = false;
+  };
+  reader.readAsText(file);
+}
+
+function handleFxFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    fxDaily = parseFxCSV(e.target.result);
+    document.getElementById('fxInfo').textContent = `✓ ${fxDaily.size} tipos de cambio diarios cargados`;
+  };
+  reader.readAsText(file);
+}
+
+function parseFxCSV(text) {
+  const map = new Map();
+  const lines = text.trim().split('\n');
+  // BCE format: Date,USD,JPY,... or similar
+  const header = lines[0].split(',');
+  const usdIdx = header.findIndex(h => h.trim().toUpperCase() === 'USD');
+  if (usdIdx < 0) return map;
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    const date = cols[0].trim();
+    const rate = parseFloat(cols[usdIdx]);
+    if (date && !isNaN(rate)) map.set(date, rate);
+  }
+  return map;
+}
+
+let usedEstimatedFx = false;
+
+// ─── EUR conversion ──────────────────────────────────────────────────────────
+function usdToEur(amountUSD, date) {
+  const key = date.toISOString().slice(0, 10);
+  let rate;
+  if (fxDaily && fxDaily.has(key)) {
+    rate = fxDaily.get(key);
+  } else if (fxDaily) {
+    for (let d = 1; d <= 7; d++) {
+      const prev = new Date(date); prev.setDate(prev.getDate() - d);
+      const prevKey = prev.toISOString().slice(0, 10);
+      if (fxDaily.has(prevKey)) { rate = fxDaily.get(prevKey); break; }
+    }
+  }
+  if (!rate) {
+    rate = FX_EUR_USD_ANNUAL[date.getFullYear()] || 1.09;
+    if (date.getFullYear() >= 2026) usedEstimatedFx = true;
+  }
+  return amountUSD / rate;
+}
+
+// ─── CSV Parsing ─────────────────────────────────────────────────────────────
+const COLUMN_MAP = {
+  'id de usuario':'user_id','user_id':'user_id','userid':'user_id',
+  'tiempo':'utc_time','utc_time':'utc_time','time':'utc_time','fecha':'utc_time',
+  'cuenta':'account','account':'account',
+  'operación':'operation','operacion':'operation','operation':'operation',
+  'moneda':'coin','coin':'coin','currency':'coin',
+  'cambio':'change','change':'change','amount':'change',
+  'observación':'remark','observacion':'remark','remark':'remark'
+};
+
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  if (lines.length < 2) return [];
+  if (lines[0].charCodeAt(0) === 0xFEFF) lines[0] = lines[0].slice(1);
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = parseCSVLine(lines[i]);
+    const row = {};
+    headers.forEach((h, idx) => {
+      const norm = COLUMN_MAP[h.toLowerCase().trim()] || h.toLowerCase().trim();
+      row[norm] = (cols[idx] || '').trim();
+    });
+    rows.push(row);
+  }
+  return rows;
+}
+
+// Parser CSV RFC 4180: soporta campos entrecomillados con comas y comillas escapadas
+function parseCSVLine(line) {
+  const cols = [];
+  let i = 0, field = '';
+  while (i < line.length) {
+    if (line[i] === '"') {
+      i++;
+      while (i < line.length) {
+        if (line[i] === '"' && line[i + 1] === '"') { field += '"'; i += 2; }
+        else if (line[i] === '"') { i++; break; }
+        else { field += line[i]; i++; }
+      }
+    } else if (line[i] === ',') {
+      cols.push(field.trim());
+      field = '';
+      i++;
+    } else {
+      field += line[i];
+      i++;
+    }
+  }
+  cols.push(field.trim());
+  return cols;
+}
+
+function parseDate(raw) {
+  raw = raw.trim();
+  const fmts = [
+    /^(\d{2})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,  // yy-mm-dd
+    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,  // yyyy-mm-dd
+    /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/, // dd/mm/yyyy
+    /^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2})$/, // yyyy/mm/dd
+  ];
+  let m;
+  if ((m = fmts[0].exec(raw))) { const yr = parseInt(m[1]); return new Date(Date.UTC(yr > 50 ? 1900+yr : 2000+yr, m[2]-1, m[3], m[4], m[5], m[6])); }
+  if ((m = fmts[1].exec(raw))) return new Date(Date.UTC(m[1], m[2]-1, m[3], m[4], m[5], m[6]));
+  if ((m = fmts[2].exec(raw))) return new Date(Date.UTC(m[3], m[2]-1, m[1], m[4], m[5], m[6]));
+  if ((m = fmts[3].exec(raw))) return new Date(Date.UTC(m[1], m[2]-1, m[3], m[4], m[5], m[6]));
+  return new Date(raw);
+}
+
+// ─── FIFO Logic ──────────────────────────────────────────────────────────────
+// Clasificación de operaciones de Binance según su efecto fiscal en IRPF España.
+//
+// BUY_OPS: operaciones que AÑADEN cripto al FIFO con coste de adquisición.
+//   El coste se calcula desde la contrapartida fiat/stable del mismo cluster.
+const BUY_OPS = new Set(['buy','large otc trading','buy crypto','fiat deposit','convert','binance convert','small assets exchange bnb','transaction buy','transaction revenue']);
+//
+// SELL_OPS: operaciones que TRANSMITEN cripto (hecho imponible IRPF).
+//   Generan ganancia/pérdida patrimonial = valor transmisión - coste FIFO.
+const SELL_OPS = new Set(['sell','large otc trading','sell crypto','convert','binance convert','small assets exchange bnb','transaction sold','sell crypto to fiat','transaction spend']);
+//
+// TRANSFER_OPS: movimientos internos entre wallets propias.
+//   NO son hechos imponibles. No modifican el FIFO.
+const TRANSFER_OPS = new Set(['withdraw','crypto withdrawal','transfer between main and funding wallet','transfer between main account and subaccount']);
+//
+// NEUTRAL_OPS: entradas sin coste (rewards) o movimientos internos (staking lock, wrapping).
+//   Positivos: entran al FIFO con coste 0 (excepto wrapping que hereda coste).
+//   Negativos: desapilan FIFO sin generar evento fiscal.
+const NEUTRAL_OPS = new Set(['deposit','fiat deposit','crypto deposit','distribution','referral commission','airdrop assets','launchpool earnings','eth 2.0 staking rewards','simple earn flexible interest','simple earn locked rewards','savings interest','pos savings interest','launchpad subscription','commission rebate','commission fee shared with you','referral kickback','cash voucher distribution','binance card cashback','reward distribution','staking rewards','earn','crypto box','staking purchase','staking redemption','simple earn locked redemption','eth 2.0 staking','beth to wbeth wrapping','token swap - redenomination/rebranding','fiat withdraw','transaction related']);
+//
+// FEE_OPS: comisiones en cripto. Desapilan FIFO sin evento fiscal.
+const FEE_OPS = new Set(['transaction fee']);
+//
+// FIAT_STABLE: monedas que actúan como contrapartida de precio, no como activo cripto.
+const FIAT_STABLE = new Set(['EUR','USD','USDT','USDC','BUSD','FDUSD','TUSD','DAI','EURT']);
+
+function calculate() {
+  calcYear = parseInt(document.getElementById('year').value);
+  usedEstimatedFx = false;
+  const rows = parseCSV(csvData);
+  if (!rows.length) { alert('CSV vacío o formato no reconocido'); return; }
+
+  // Group by timestamp (±5s window) + operation
+  const events = rows.map(r => ({
+    ...r,
+    dt: parseDate(r.utc_time || ''),
+    ts: parseDate(r.utc_time || '').getTime(),
+    op: (r.operation || '').toLowerCase().trim(),
+    coin: (r.coin || '').toUpperCase(),
+    amount: parseFloat((r.change || '0').replace(',', '.')) || 0
+  })).filter(e => !isNaN(e.dt.getTime()));
+
+  events.sort((a, b) => a.ts - b.ts);
+
+  if (!events.length) { alert('Sin eventos válidos en el CSV'); return; }
+
+  // ─── Clustering ───────────────────────────────────────────────────────────
+  // Binance registra una operación como múltiples filas en el CSV:
+  const priceCache = new Map(); // key: "coinFrom|coinTo" -> [{ts, rate}]
+  //   - "Transaction Buy ADA +22.51" + "Transaction Spend USDT -29.95" + "Transaction Fee ADA -0.02"
+  //   - Todas con el mismo timestamp (o ±1-2 segundos)
+  //
+  // Agrupamos filas con timestamp ≤2s de diferencia en "clusters".
+  // Max 8 filas por cluster para evitar mezclar operaciones independientes.
+  // El clustering permite calcular ratios de precio entre monedas del mismo trade.
+  const clusters = [];
+  let cluster = [events[0]];
+  for (let i = 1; i < events.length; i++) {
+    const first = cluster[0];
+    if (Math.abs(events[i].ts - first.ts) <= 2000 && cluster.length < 15) {
+      cluster.push(events[i]);
+    } else {
+      clusters.push(cluster);
+      cluster = [events[i]];
+    }
+  }
+  if (cluster.length) clusters.push(cluster);
+
+  // ─── Price Cache ─────────────────────────────────────────────────────────
+  // Para cada cluster, calculamos los ratios de precio entre monedas.
+  // Ejemplo: cluster con USDT -29.95 y ADA +22.51 → ratio USDT/ADA = 22.51/29.95
+  //
+  // Sub-agrupamos por "remark" (columna Observación del CSV) para operaciones
+  // como "Small Assets Exchange BNB" donde un solo timestamp tiene múltiples
+  // conversiones independientes (BTC→BNB, ROSE→BNB, LUNA→BNB).
+  // Sin sub-agrupar, se mezclarían todos los importes y los ratios serían incorrectos.
+  for (const cl of clusters) {
+    const tsKey = cl[0].ts;
+    // Sub-cluster by remark if present (e.g. "BTC to BNB", "ROSE to BNB")
+    const subGroups = new Map(); // remark -> events
+    for (const ev of cl) {
+      const remark = (ev.remark || '').trim();
+      const key = remark || '__default__';
+      if (!subGroups.has(key)) subGroups.set(key, []);
+      subGroups.get(key).push(ev);
+    }
+    // If all remarks are empty or only one group, treat whole cluster as one group
+    const groups = subGroups.size > 1 ? [...subGroups.values()] : [cl];
+    for (const group of groups) {
+      const positives = {};
+      const negatives = {};
+      for (const ev of group) {
+        if (ev.amount > 0) positives[ev.coin] = (positives[ev.coin] || 0) + ev.amount;
+        else if (ev.amount < 0) negatives[ev.coin] = (negatives[ev.coin] || 0) + Math.abs(ev.amount);
+      }
+      for (const [negCoin, negQty] of Object.entries(negatives)) {
+        for (const [posCoin, posQty] of Object.entries(positives)) {
+          if (negQty > 0 && posQty > 0) {
+            const k1 = `${negCoin}|${posCoin}`, k2 = `${posCoin}|${negCoin}`;
+            if (!priceCache.has(k1)) priceCache.set(k1, []);
+            if (!priceCache.has(k2)) priceCache.set(k2, []);
+            priceCache.get(k1).push({ ts: tsKey, rate: posQty / negQty });
+            priceCache.get(k2).push({ ts: tsKey, rate: negQty / posQty });
+          }
+        }
+      }
+    }
+  }
+
+  // ─── Búsqueda de precios ───────────────────────────────────────────────────
+  // findPrice: busca ratio directo entre dos monedas en el cache, dentro de ±5s.
+  // Devuelve: cuántas unidades de coinTo obtienes por 1 unidad de coinFrom.
+  function findPrice(ts, coinFrom, coinTo) {
+    const entries = priceCache.get(`${coinFrom}|${coinTo}`);
+    if (!entries || !entries.length) return null;
+    let best = null, bestDiff = Infinity;
+    for (const e of entries) {
+      const diff = Math.abs(e.ts - ts);
+      if (diff < bestDiff) { bestDiff = diff; best = e.rate; }
+      if (diff === 0) break;
+    }
+    return bestDiff <= 5000 ? best : null;
+  }
+
+  // findPriceIndirect: busca precio con hasta 2 saltos.
+  // Ejemplo: BTC→USDC no existe directo, pero BTC→BNB y BNB→USDC sí.
+  // Entonces: precio BTC→USDC = (BTC→BNB) × (BNB→USDC)
+  // Esto resuelve "Small Assets Exchange BNB" donde todo pasa por BNB.
+  // Índice por coin origen para evitar iterar todo el priceCache (O(n) → O(targets))
+  const priceCacheByFrom = new Map();
+  for (const key of priceCache.keys()) {
+    const [from, to] = key.split('|');
+    if (!priceCacheByFrom.has(from)) priceCacheByFrom.set(from, new Set());
+    priceCacheByFrom.get(from).add(to);
+  }
+  function findPriceIndirect(ts, coin, targetStable) {
+    // Direct
+    const direct = findPrice(ts, coin, targetStable);
+    if (direct) return direct;
+    // Try via any intermediate (indexed lookup)
+    const targets = priceCacheByFrom.get(coin);
+    if (!targets) return null;
+    for (const mid of targets) {
+      if (mid === targetStable) continue;
+      const hop1 = findPrice(ts, coin, mid);
+      const hop2 = findPrice(ts, mid, targetStable);
+      if (hop1 && hop2) return hop1 * hop2;
+    }
+    return null;
+  }
+
+  // ─── FIFO Processing ──────────────────────────────────────────────────────
+  // Colas FIFO por moneda: cada entrada es {qty, costPerUnit (en EUR), date}
+  // El criterio FIFO (art. 37.2 LIRPF) exige que al vender, se consuman primero
+  // los lotes más antiguos para calcular el coste de adquisición.
+  const fifo = {};
+  const results = [];
+  const unknownOps = new Set();
+  let fundingCount = 0;
+
+  for (const cl of clusters) {
+    // ┌─────────────────────────────────────────────────────────────────────┐
+    // │ ORDEN DE PROCESAMIENTO DENTRO DEL CLUSTER                          │
+    // │                                                                     │
+    // │ Procesamos negativos ANTES que positivos para que operaciones como  │
+    // │ "BETH to WBETH Wrapping" funcionen correctamente:                  │
+    // │   1. BETH -0.032 (negativo) → desapila FIFO de BETH, guarda coste │
+    // │   2. WBETH +0.029 (positivo) → se salta (isWrappingEntry)         │
+    // │   → El coste se asigna al WBETH desde el paso 1                   │
+    // │                                                                     │
+    // │ Sin este orden, el positivo se procesa primero, se salta, y cuando │
+    // │ el negativo intenta asignar coste al WBETH no lo encuentra en FIFO │
+    // └─────────────────────────────────────────────────────────────────────┘
+    const sorted = [...cl].sort((a, b) => {
+      // Negativos primero, positivos después
+      if (a.amount < 0 && b.amount >= 0) return -1;
+      if (a.amount >= 0 && b.amount < 0) return 1;
+      return 0;
+    });
+
+    for (const ev of sorted) {
+      if (ev.account && ev.account.toLowerCase() === 'funding') fundingCount++;
+      const { coin, op, amount, dt, ts } = ev;
+
+      // ── Ignorar fiat/stablecoins como activo principal ──
+      // EUR, USD, USDT, USDC, etc. no son "cripto" a efectos de ganancia patrimonial.
+      // Sus movimientos solo nos interesan como contrapartida para calcular precios.
+      if (FIAT_STABLE.has(coin)) continue;
+
+      // ── Registro de operaciones no reconocidas ──
+      if (!BUY_OPS.has(op) && !SELL_OPS.has(op) && !NEUTRAL_OPS.has(op) && !TRANSFER_OPS.has(op) && !FEE_OPS.has(op) && amount !== 0) {
+        unknownOps.add(op);
+      }
+
+      // ┌─────────────────────────────────────────────────────────────────┐
+      // │ ENTRADA AL FIFO (amount > 0)                                    │
+      // │                                                                  │
+      // │ Casos:                                                           │
+      // │ - BUY_OPS: compra con coste (se busca precio en fiat/stable)    │
+      // │ - NEUTRAL_OPS: reward/airdrop/deposit (coste 0 — fiscalmente    │
+      // │   correcto, tributa como rendimiento de capital mobiliario al    │
+      // │   recibirlo, pero para FIFO futuro el coste es 0)               │
+      // │ - Wrapping/Rebranding positivo: se SALTA aquí porque el coste   │
+      // │   lo asigna el lado negativo (ver NEUTRAL EXIT más abajo)       │
+      // └─────────────────────────────────────────────────────────────────┘
+      if (amount > 0 && (BUY_OPS.has(op) || NEUTRAL_OPS.has(op))) {
+        const isWrappingEntry = NEUTRAL_OPS.has(op) && (op.includes('wrapping') || op.includes('redenomination') || op.includes('rebranding'));
+        if (isWrappingEntry) {
+          // No hacer nada — el coste se asigna desde el NEUTRAL EXIT del coin origen.
+          // El NEUTRAL EXIT ya habrá creado la entrada en fifo[WBETH] con coste heredado
+          // porque procesamos negativos antes que positivos (ver sort arriba).
+        }
+        else {
+          let costPerUnit = 0;
+          if (!NEUTRAL_OPS.has(op)) {
+            // ── Buscar coste de adquisición desde contrapartida fiat/stable ──
+            // Ejemplo: "Transaction Buy ADA +22.51" con "Transaction Spend USDT -29.95"
+            // → costPerUnit = 29.95/22.51 USDT, convertido a EUR
+            // Se busca primero directo, luego 2 saltos (ej: BTC→BNB→USDC→EUR)
+            for (const stable of FIAT_STABLE) {
+              const rate = findPriceIndirect(ts, stable, coin);
+              if (rate) {
+                costPerUnit = 1 / rate;
+                if (stable !== 'EUR') costPerUnit = usdToEur(costPerUnit, dt);
+                break;
+              }
+              const rateInv = findPriceIndirect(ts, coin, stable);
+              if (rateInv) {
+                costPerUnit = rateInv;
+                if (stable !== 'EUR') costPerUnit = usdToEur(costPerUnit, dt);
+                break;
+              }
+            }
+            // Si costPerUnit queda en 0, significa que no hay contrapartida fiat
+            // en el cluster (compra cripto→cripto sin referencia de precio).
+            // Se marca con alerta al vender.
+          }
+          if (!fifo[coin]) fifo[coin] = [];
+          fifo[coin].push({ qty: amount, costPerUnit, date: dt });
+        }
+      }
+
+      // ┌─────────────────────────────────────────────────────────────────┐
+      // │ NEUTRAL EXIT (amount < 0, NEUTRAL_OPS)                          │
+      // │                                                                  │
+      // │ Operaciones que sacan cripto del spot sin ser una venta fiscal:  │
+      // │ - Staking Purchase: bloqueas cripto para staking (no es venta)  │
+      // │ - BETH to WBETH Wrapping: conversión interna, hereda coste      │
+      // │ - Token Swap Redenomination: cambio de ticker, hereda coste     │
+      // │                                                                  │
+      // │ Para wrapping/rebranding: el coste total desapilado se asigna   │
+      // │ al nuevo coin (WBETH) creando una entrada en su FIFO.           │
+      // └─────────────────────────────────────────────────────────────────┘
+      else if (amount < 0 && NEUTRAL_OPS.has(op)) {
+        const isWrapping = op.includes('wrapping') || op.includes('redenomination') || op.includes('rebranding');
+        let qty = Math.abs(amount);
+        let totalCostInherited = 0;
+        if (!fifo[coin]) fifo[coin] = [];
+        while (qty > 1e-12 && fifo[coin].length > 0) {
+          const lot = fifo[coin][0];
+          if (lot.qty <= qty) {
+            totalCostInherited += lot.qty * lot.costPerUnit;
+            qty -= lot.qty;
+            fifo[coin].shift();
+          } else {
+            totalCostInherited += qty * lot.costPerUnit;
+            lot.qty -= qty;
+            qty = 0;
+          }
+        }
+        // ── Herencia de coste para wrapping/rebranding ──
+        // Ejemplo: BETH(coste acumulado 50€) → WBETH
+        // El WBETH hereda los 50€ como coste de adquisición.
+        // Esto es fiscalmente correcto: no hay transmisión, solo cambio de forma.
+        if (isWrapping && totalCostInherited >= 0) {
+          // Buscar el coin destino en el mismo cluster (la fila positiva del wrapping)
+          const target = cl.find(other =>
+            other.amount > 0 && other.coin !== coin && !FIAT_STABLE.has(other.coin)
+          );
+          if (target) {
+            if (!fifo[target.coin]) fifo[target.coin] = [];
+            fifo[target.coin].push({
+              qty: target.amount,
+              costPerUnit: totalCostInherited / target.amount,
+              date: dt
+            });
+          }
+        }
+      }
+
+      // ┌─────────────────────────────────────────────────────────────────┐
+      // │ TRANSFER (amount < 0, TRANSFER_OPS)                             │
+      // │                                                                  │
+      // │ Transferencias internas (Main↔Funding, withdraw a wallet propia)│
+      // │ NO son hechos imponibles. No desapilamos del FIFO porque el     │
+      // │ activo sigue siendo tuyo — solo cambia de ubicación.            │
+      // │                                                                  │
+      // │ Nota: si es un withdraw a un exchange para vender, la venta se  │
+      // │ declarará cuando ocurra en el otro exchange (fuera de este CSV).│
+      // └─────────────────────────────────────────────────────────────────┘
+      else if (amount < 0 && TRANSFER_OPS.has(op)) {
+        // No-op: el FIFO no cambia.
+      }
+
+      // ┌─────────────────────────────────────────────────────────────────┐
+      // │ FEE (amount < 0, FEE_OPS)                                       │
+      // │                                                                  │
+      // │ "Transaction Fee" en cripto (ej: -0.02251 ADA como comisión).   │
+      // │ Desapilamos del FIFO porque ya no tienes esas unidades.         │
+      // │ Fiscalmente, la fee es parte del coste de la operación, pero    │
+      // │ como Binance ya la descuenta del amount recibido en el Buy,     │
+      // │ aquí solo ajustamos el stock sin generar evento fiscal.          │
+      // └─────────────────────────────────────────────────────────────────┘
+      else if (amount < 0 && FEE_OPS.has(op)) {
+        let feeQty = Math.abs(amount);
+        if (!fifo[coin]) fifo[coin] = [];
+        while (feeQty > 1e-12 && fifo[coin].length > 0) {
+          const lot = fifo[coin][0];
+          if (lot.qty <= feeQty) {
+            feeQty -= lot.qty;
+            fifo[coin].shift();
+          } else {
+            lot.qty -= feeQty;
+            feeQty = 0;
+          }
+        }
+      }
+
+      // ┌─────────────────────────────────────────────────────────────────┐
+      // │ EXIT / VENTA (amount < 0, SELL_OPS)                             │
+      // │                                                                  │
+      // │ Transmisión patrimonial sujeta a IRPF. Se calcula:              │
+      // │ - Coste de adquisición: suma FIFO de los lotes consumidos       │
+      // │ - Valor de transmisión: precio de venta en EUR                  │
+      // │ - Ganancia = Valor transmisión - Coste adquisición              │
+      // │                                                                  │
+      // │ Para el valor de transmisión se busca:                          │
+      // │ 1. Precio directo coin→fiat/stable en el cluster                │
+      // │ 2. Precio indirecto 2 saltos (coin→BNB→USDC)                   │
+      // │ 3. Fallback: valor de la cripto recibida si es cripto→cripto    │
+      // │ Si no se encuentra, queda en 0 con alerta para revisión manual. │
+      // └─────────────────────────────────────────────────────────────────┘
+      else if (amount < 0 && SELL_OPS.has(op)) {
+        let qtyToSell = Math.abs(amount);
+        let totalCost = 0;
+
+        if (!fifo[coin]) fifo[coin] = [];
+        while (qtyToSell > 1e-12 && fifo[coin].length > 0) {
+          const lot = fifo[coin][0];
+          if (lot.qty <= qtyToSell) {
+            totalCost += lot.qty * lot.costPerUnit;
+            qtyToSell -= lot.qty;
+            fifo[coin].shift();
+          } else {
+            totalCost += qtyToSell * lot.costPerUnit;
+            lot.qty -= qtyToSell;
+            qtyToSell = 0;
+          }
+        }
+
+        // ── Valor de transmisión ──
+        let valorTransmision = 0;
+        // Intento 1: precio directo o 2-hop a fiat/stable
+        for (const stable of FIAT_STABLE) {
+          const rate = findPriceIndirect(ts, coin, stable);
+          if (rate) {
+            valorTransmision = Math.abs(amount) * rate;
+            if (stable !== 'EUR') {
+              valorTransmision = usdToEur(valorTransmision, dt);
+            }
+            break;
+          }
+        }
+        // Intento 2: si es cripto→cripto, usar el valor de la cripto recibida
+        // Ejemplo: vendo BNB, recibo BTC → busco precio de BTC en EUR
+        if (valorTransmision === 0) {
+          for (const other of cl) {
+            if (other.amount > 0 && other.coin !== coin && !FIAT_STABLE.has(other.coin)) {
+              for (const stable of FIAT_STABLE) {
+                const rate = findPriceIndirect(ts, other.coin, stable);
+                if (rate) {
+                  valorTransmision = other.amount * rate;
+                  if (stable !== 'EUR') valorTransmision = usdToEur(valorTransmision, dt);
+                  break;
+                }
+              }
+              if (valorTransmision > 0) break;
+            }
+          }
+        }
+
+        const ganancia = valorTransmision - totalCost;
+
+        // Solo registrar operaciones del año fiscal seleccionado
+        if (dt.getFullYear() === calcYear) {
+          results.push({
+            fecha: dt.toISOString().slice(0, 19).replace('T', ' '),
+            moneda: coin,
+            cantidad: Math.abs(amount),
+            valorTransmision: Math.round(valorTransmision * 100) / 100,
+            costeAdquisicion: Math.round(totalCost * 100) / 100,
+            ganancia: Math.round(ganancia * 100) / 100,
+            operacion: op,
+            // Alertas para revisión manual:
+            // - Coste 0: no se encontró precio de compra (cripto→cripto sin ref fiat)
+            // - Valor transmisión 0: no se encontró precio de venta
+            alerta: totalCost === 0 ? '⚠️ Coste 0' :
+              valorTransmision === 0 ? '⚠️ Valor transmisión 0 — revisar' : ''
+          });
+        }
+      }
+    }
+  }
+
+  calcResults = { results, unknownOps: [...unknownOps], fundingCount, usedEstimatedFx, events, clusters, priceCache, priceCacheByFrom };
+  renderResults();
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+// Escape HTML para prevenir XSS al renderizar datos del CSV en el DOM
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderResults() {
+  const { results, unknownOps, fundingCount, usedEstimatedFx } = calcResults;
+  document.getElementById('results').style.display = 'block';
+
+  const total = results.reduce((s, r) => s + r.ganancia, 0);
+  const alertCount = results.filter(r => r.alerta).length;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="stat"><div class="value">${results.length}</div><div class="label">Operaciones de venta en ${calcYear}</div></div>
+    <div class="stat"><div class="value ${total >= 0 ? 'positive' : 'negative'}">${total >= 0 ? '+' : ''}${total.toFixed(2)} €</div><div class="label">Ganancia/Pérdida neta</div></div>
+    <div class="stat"><div class="value">${alertCount}</div><div class="label">Alertas (coste 0)</div></div>
+    <div class="stat"><div class="value">${fundingCount}</div><div class="label">Ops. Funding detectadas</div></div>
+  `;
+
+  let alertsHtml = '';
+  if (unknownOps.length) {
+    alertsHtml += `<div class="alert">⚠️ Operaciones no reconocidas (revisar si tienen impacto fiscal): ${unknownOps.map(esc).join(', ')}</div>`;
+  }
+  if (alertCount > 0) {
+    alertsHtml += `<div class="alert">${alertCount} operaciones con coste de adquisición 0 € — revisar manualmente</div>`;
+  }
+  if (!alertCount && !unknownOps.length && !usedEstimatedFx) {
+    alertsHtml = `<div class="alert alert-info">✓ Sin alertas. Revisa igualmente el detalle antes de declarar.</div>`;
+  }
+  if (usedEstimatedFx) {
+    alertsHtml += `<div class="alert">⚠️ Se usó tipo de cambio EUR/USD estimado para 2026+. Carga el CSV diario del BCE para mayor precisión.</div>`;
+  }
+  // ── Avisos fiscales informativos ──
+  alertsHtml += `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:0.8rem;color:var(--text-muted)">ℹ️ Avisos fiscales importantes (clic para expandir)</summary>`;
+  alertsHtml += `<div class="alert alert-info">ℹ️ <strong>FIFO global:</strong> Si posees la misma cripto en otros exchanges, debes consolidar todos los historiales para un FIFO correcto (art. 37.2 LIRPF — valores homogéneos).</div>`;
+  alertsHtml += `<div class="alert alert-info">ℹ️ <strong>Modelo 721:</strong> Si a 31/12 el saldo conjunto en exchanges extranjeros supera 50.000 €, debes presentar el Modelo 721 (plazo: enero-marzo del año siguiente).</div>`;
+  const losses = results.filter(r => r.ganancia < 0);
+  if (losses.length > 0) {
+    alertsHtml += `<div class="alert">⚠️ <strong>Regla antiaplicación (art. 33.5.f LIRPF):</strong> Si recompraste la misma cripto en los 2 meses anteriores o posteriores a una venta con pérdida, esa pérdida NO es computable. Revisa manualmente las ${losses.length} operaciones con pérdida.</div>`;
+  }
+  alertsHtml += `<div class="alert alert-info">ℹ️ <strong>Staking/Earn:</strong> Los rewards recibidos tributan como rendimiento de capital mobiliario (base del ahorro) al valor de mercado en la fecha de recepción. Este informe solo calcula ganancias patrimoniales por ventas.</div>`;
+  alertsHtml += `</details>`;
+  document.getElementById('alerts').innerHTML = alertsHtml;
+
+  document.getElementById('thead').innerHTML = '<tr><th>Fecha</th><th>Moneda</th><th>Cantidad</th><th>Valor transmisión €</th><th>Coste adquisición €</th><th>G/P €</th><th>Operación</th><th>Alerta</th></tr>';
+  document.getElementById('tbody').innerHTML = results.map(r => `<tr>
+    <td>${esc(r.fecha)}</td><td>${esc(r.moneda)}</td><td>${r.cantidad.toFixed(8)}</td>
+    <td>${r.valorTransmision.toFixed(2)}</td><td>${r.costeAdquisicion.toFixed(2)}</td>
+    <td class="${r.ganancia >= 0 ? 'positive' : 'negative'}">${r.ganancia >= 0 ? '+' : ''}${r.ganancia.toFixed(2)}</td>
+    <td>${esc(r.operacion)}</td><td>${esc(r.alerta)}</td>
+  </tr>`).join('');
+}
+
+// ─── CoinGecko Price API ──────────────────────────────────────────────────────
+const COINGECKO_MAP = { BETH:'ethereum', ROSE:'oasis-network', BNB:'binancecoin', BTC:'bitcoin', ETH:'ethereum', LUNA:'terra-luna', BONK:'bonk', WBETH:'ethereum', ADA:'cardano', DOGE:'dogecoin', XMR:'monero' };
+
+async function fetchCGPrice(coin, date) {
+  const id = COINGECKO_MAP[coin];
+  if (!id) return null;
+  const dd = String(date.getUTCDate()).padStart(2,'0');
+  const mm = String(date.getUTCMonth()+1).padStart(2,'0');
+  const yyyy = date.getUTCFullYear();
+  const url = `https://api.coingecko.com/api/v3/coins/${id}/history?date=${dd}-${mm}-${yyyy}&localization=false`;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 429) { await new Promise(r => setTimeout(r, 2000 * (attempt+1))); continue; }
+      if (!res.ok) return null;
+      const data = await res.json();
+      const eur = data?.market_data?.current_price?.eur;
+      return eur || null;
+    } catch { return null; }
+  }
+  return null;
+}
+
+// ─── Downloads ───────────────────────────────────────────────────────────────
+function downloadCSV() {
+  const { results } = calcResults;
+  const header = 'fecha,moneda,cantidad_vendida,valor_transmision_eur,coste_adquisicion_eur,ganancia_perdida_eur,operacion,alerta';
+  const lines = results.map(r => `${r.fecha},${r.moneda},${r.cantidad},${r.valorTransmision},${r.costeAdquisicion},${r.ganancia},${r.operacion},"${r.alerta}"`);
+  download(`binance_fifo_resultado_${calcYear}.csv`, [header, ...lines].join('\n'));
+}
+
+async function buildTXT() {
+  const { results, unknownOps, events, clusters } = calcResults;
+  const total = results.reduce((s, r) => s + r.ganancia, 0);
+  const RCM_OPS = ['eth 2.0 staking rewards','simple earn flexible interest','simple earn locked rewards','savings interest','pos savings interest','staking rewards','launchpool earnings'];
+
+  // ── RESUMEN FIFO ──
+  let txt = `RESUMEN FISCAL CRIPTOMONEDAS — IRPF ${calcYear}\n`;
+  txt += `Generado automáticamente mediante criterio FIFO (art. 37.2 LIRPF)\n`;
+  txt += '='.repeat(60) + '\n\n';
+  txt += `Operaciones de venta en ${calcYear}: ${results.length}\n`;
+  txt += `Ganancia/Pérdida NETA (sin correcciones): ${total >= 0 ? '+' : ''}${total.toFixed(2)} €\n\n`;
+  txt += 'DETALLE:\n' + '-'.repeat(60) + '\n';
+  results.forEach(r => {
+    txt += `  ${r.fecha} | ${r.moneda} | Venta: ${r.valorTransmision.toFixed(2)} € | Coste: ${r.costeAdquisicion.toFixed(2)} € | G/P: ${r.ganancia >= 0 ? '+' : ''}${r.ganancia.toFixed(2)} €${r.alerta ? ' ' + r.alerta : ''}\n`;
+  });
+
+
+  // ══════════════════════════════════════════════════════════════
+  // BLOQUE 1 — CORRECCIÓN AUTOMÁTICA WBETH/BETH/ETH
+  // ══════════════════════════════════════════════════════════════
+  let wbethCosteCorregido = 0;
+  let wbethGananciaCorregida = null;
+  const wbethVenta = results.find(r => r.moneda === 'WBETH');
+  const ethStakingOps = events.filter(e => e.op === 'eth 2.0 staking' && e.coin === 'ETH' && e.amount < 0);
+
+  if (wbethVenta && ethStakingOps.length > 0) {
+    txt += '\n\n' + '═'.repeat(60) + '\n';
+    txt += 'BLOQUE 1 — CORRECCIÓN AUTOMÁTICA WBETH/BETH/ETH\n';
+    txt += '═'.repeat(60) + '\n\n';
+
+    // Buscar la compra de ETH más cercana al primer staking
+    const firstStaking = ethStakingOps[0];
+    const ethBuys = events.filter(e => e.coin === 'ETH' && e.amount > 0 && (e.op === 'transaction buy' || e.op === 'deposit'));
+    let bestBuy = null, bestDiff = Infinity;
+    for (const b of ethBuys) {
+      const diff = Math.abs(b.ts - firstStaking.ts);
+      if (diff < bestDiff) { bestDiff = diff; bestBuy = b; }
+    }
+
+    if (bestBuy) {
+      // Buscar el USDT gastado en el mismo cluster
+      const buyCluster = clusters.find(cl => cl.some(e => e === bestBuy));
+      const spend = buyCluster ? buyCluster.find(e => FIAT_STABLE.has(e.coin) && e.amount < 0) : null;
+      const usdtPagado = spend ? Math.abs(spend.amount) : 0;
+      const yearBuy = bestBuy.dt.getFullYear();
+      const fxRate = FX_EUR_USD_ANNUAL[yearBuy] || 1.09;
+      const costeEthEur = usdtPagado > 0 ? usdtPagado / fxRate : 0;
+      const isDeposit = bestBuy.op === 'deposit';
+
+      // Cantidad WBETH vendida
+      const wbethQty = wbethVenta.cantidad;
+      wbethCosteCorregido = costeEthEur;
+      wbethGananciaCorregida = wbethVenta.valorTransmision - costeEthEur;
+
+      txt += '  ┌─────────────────────────────────────────────────┐\n';
+      txt += '  │ CORRECCIÓN WBETH — COSTE PROPAGADO ETH          │\n';
+      txt += '  ├─────────────────────────────────────────────────┤\n';
+      if (isDeposit) {
+        txt += `  │ ETH depositado: ${Math.abs(bestBuy.amount).toFixed(8)} ETH      │\n`;
+        txt += `  │ Fecha: ${bestBuy.dt.toISOString().slice(0,10)}                          │\n`;
+        txt += `  │ ⚠️ Comprado fuera de Binance — precio externo   │\n`;
+        txt += `  │ Coste ETH en EUR: NO DISPONIBLE EN CSV          │\n`;
+      } else {
+        txt += `  │ ETH comprado: ${Math.abs(bestBuy.amount).toFixed(8)} ETH por ${usdtPagado.toFixed(2)} USDT │\n`;
+        txt += `  │ Fecha compra ETH: ${bestBuy.dt.toISOString().slice(0,10)}                │\n`;
+        txt += `  │ Tipo EUR/USD aplicado: ${fxRate} (medio ${yearBuy})     │\n`;
+        txt += `  │ Coste ETH en EUR: ${costeEthEur.toFixed(2)} €                    │\n`;
+      }
+      txt += '  │                                                 │\n';
+      txt += `  │ Coste propagado a WBETH: ${costeEthEur.toFixed(2)} €             │\n`;
+      txt += `  │ Ganancia WBETH (script): +${wbethVenta.ganancia.toFixed(2)} €          │\n`;
+      txt += `  │ Ganancia WBETH (corregida): ${wbethGananciaCorregida >= 0 ? '+' : ''}${wbethGananciaCorregida.toFixed(2)} €       │\n`;
+      txt += '  │                                                 │\n';
+      txt += `  │ IMPACTO: −${costeEthEur.toFixed(2)} € sobre el resultado     │\n`;
+      txt += `  │ Ganancia neta FIFO: ${total >= 0 ? '+' : ''}${total.toFixed(2)} €              │\n`;
+      txt += `  │ Ganancia neta CORREGIDA: ${(total - wbethVenta.ganancia + wbethGananciaCorregida) >= 0 ? '+' : ''}${(total - wbethVenta.ganancia + wbethGananciaCorregida).toFixed(2)} €         │\n`;
+      txt += '  └─────────────────────────────────────────────────┘\n';
+    }
+  }
+  const totalCorregido = wbethGananciaCorregida !== null ? total - wbethVenta.ganancia + wbethGananciaCorregida : total;
+
+  // ══════════════════════════════════════════════════════════════
+  // BLOQUE 2 — CÁLCULO RCM POR STAKING/EARN
+  // ══════════════════════════════════════════════════════════════
+  txt += '\n\n' + '═'.repeat(60) + '\n';
+  txt += `BLOQUE 2 — RENDIMIENTOS CAPITAL MOBILIARIO ${calcYear} (Staking/Earn)\n`;
+  txt += '═'.repeat(60) + '\n\n';
+
+  const rewardEvts = events.filter(e => e.amount > 0 && RCM_OPS.includes(e.op) && e.dt.getFullYear() === calcYear && !FIAT_STABLE.has(e.coin));
+  // Agrupar por moneda
+  const rcmByCoins = {};
+  rewardEvts.forEach(e => {
+    if (!rcmByCoins[e.coin]) rcmByCoins[e.coin] = { qty: 0, ops: new Set() };
+    rcmByCoins[e.coin].qty += e.amount;
+    rcmByCoins[e.coin].ops.add(e.op);
+  });
+
+  let totalRCM = 0;
+  const rcmLines = [];
+  for (const [coin, data] of Object.entries(rcmByCoins)) {
+    // Intentar obtener precio de CoinGecko (usa fecha media del año fiscal)
+    const midDate = new Date(Date.UTC(calcYear, 6, 1));
+    let price = null;
+    try { price = await fetchCGPrice(coin, midDate); } catch {}
+    const valor = price ? (data.qty * price) : null;
+    if (valor) totalRCM += valor;
+    rcmLines.push({ coin, qty: data.qty, valor, ops: [...data.ops].join(', ') });
+  }
+
+  rcmLines.forEach(r => {
+    txt += `  ${r.coin.padEnd(6)} | ${r.qty.toFixed(8)} uds | ${r.valor !== null ? '~' + r.valor.toFixed(2) + ' €' : 'precio manual necesario'} | ${r.ops}\n`;
+  });
+  txt += '  ' + '-'.repeat(55) + '\n';
+  txt += `  TOTAL RCM staking ${calcYear}: ${totalRCM > 0 ? '~' + totalRCM.toFixed(2) + ' €' : 'precio manual necesario'}\n`;
+  txt += '  Retenciones Binance: 0.00 € (Binance no retiene para residentes ES)\n\n';
+  txt += '  → Casilla Renta Web: [0033] Otros rendimientos capital mobiliario\n';
+  if (totalRCM > 0) txt += `  → Introducir: ~${totalRCM.toFixed(2)} € (sin retención)\n`;
+
+  // ══════════════════════════════════════════════════════════════
+  // BLOQUE 3 — PERMUTAS CRIPTO→CRIPTO PREVIAS
+  // ══════════════════════════════════════════════════════════════
+  txt += '\n\n' + '═'.repeat(60) + '\n';
+  txt += 'BLOQUE 3 — PERMUTAS CRIPTO→CRIPTO FUERA DEL AÑO FISCAL\n';
+  txt += '═'.repeat(60) + '\n\n';
+
+  let permCount = 0;
+  for (const cl of clusters) {
+    if (cl[0].dt.getFullYear() === calcYear) continue; // solo previas
+    const negC = cl.filter(e => e.amount < 0 && !FIAT_STABLE.has(e.coin) && !NEUTRAL_OPS.has(e.op) && !TRANSFER_OPS.has(e.op) && !FEE_OPS.has(e.op));
+    const posC = cl.filter(e => e.amount > 0 && !FIAT_STABLE.has(e.coin) && BUY_OPS.has(e.op));
+    const hasFiat = cl.some(e => FIAT_STABLE.has(e.coin) && Math.abs(e.amount) > 0.001);
+    if (negC.length > 0 && posC.length > 0 && !hasFiat) {
+      for (const neg of negC) {
+        for (const pos of posC) {
+          if (neg.coin !== pos.coin) {
+            const f = neg.dt.toISOString().slice(0,10);
+            txt += `  ${f} | ${neg.coin} -${Math.abs(neg.amount).toFixed(8)} → ${pos.coin} +${pos.amount.toFixed(8)}\n`;
+            txt += `    Valor estimado: precio manual necesario\n`;
+            txt += `    Activo resultante vendido en ${calcYear}: ${results.some(r => r.moneda === pos.coin) ? 'Sí (coste afectado)' : 'No'}\n\n`;
+            permCount++;
+          }
+        }
+      }
+    }
+  }
+  if (!permCount) txt += '  No se detectaron permutas cripto→cripto previas sin fiat.\n';
+  txt += '\n  NOTA: Si alguna permuta previa no fue declarada en su año,\n  existe un riesgo de regularización por parte de la AEAT.\n';
+
+  // ══════════════════════════════════════════════════════════════
+  // BLOQUE 4 — RESUMEN EJECUTIVO FINAL
+  // ══════════════════════════════════════════════════════════════
+  txt += '\n\n' + '═'.repeat(60) + '\n';
+  txt += 'BLOQUE 4 — DATOS DEFINITIVOS PARA RENTA WEB\n';
+  txt += '═'.repeat(60) + '\n\n';
+
+  const ajuste = wbethCosteCorregido;
+  txt += '  ╔═════════════════════════════════════════════════════╗\n';
+  txt += `  ║ DATOS PARA RENTA WEB — IRPF ${calcYear}                 ║\n`;
+  txt += '  ╠═════════════════════════════════════════════════════╣\n';
+  txt += '  ║ BASE DEL AHORRO — GANANCIAS PATRIMONIALES         ║\n';
+  txt += '  ║ Apartado: Monedas virtuales                        ║\n';
+  txt += `  ║ Resultado FIFO bruto: ${total >= 0 ? '+' : ''}${total.toFixed(2)} €${' '.repeat(Math.max(1, 24 - total.toFixed(2).length))}║\n`;
+  if (ajuste > 0) {
+    txt += `  ║ Ajuste coste WBETH: −${ajuste.toFixed(2)} €${' '.repeat(Math.max(1, 25 - ajuste.toFixed(2).length))}║\n`;
+    txt += `  ║ RESULTADO NETO A DECLARAR: ${totalCorregido >= 0 ? '+' : ''}${totalCorregido.toFixed(2)} €${' '.repeat(Math.max(1, 19 - totalCorregido.toFixed(2).length))}║\n`;
+  } else {
+    txt += `  ║ RESULTADO NETO A DECLARAR: ${total >= 0 ? '+' : ''}${total.toFixed(2)} €${' '.repeat(Math.max(1, 19 - total.toFixed(2).length))}║\n`;
+  }
+  txt += '  ╠═════════════════════════════════════════════════════╣\n';
+  txt += '  ║ BASE DEL AHORRO — RENDIMIENTOS CAPITAL MOBILIARIO  ║\n';
+  txt += '  ║ Casilla [0033] Otros rendimientos (staking/earn)   ║\n';
+  txt += `  ║ Importe: ${totalRCM > 0 ? '~' + totalRCM.toFixed(2) : 'manual'} € | Retención: 0.00 €${' '.repeat(Math.max(1, totalRCM > 0 ? 14 - totalRCM.toFixed(2).length : 8))}║\n`;
+  txt += '  ╠═════════════════════════════════════════════════════╣\n';
+  const baseTotal = totalCorregido + totalRCM;
+  const cuota = baseTotal > 0 ? baseTotal * 0.19 : 0;
+  txt += '  ║ CUOTA ESTIMADA (19% primer tramo hasta 6000€)      ║\n';
+  txt += `  ║ (${totalCorregido.toFixed(2)} + ${totalRCM.toFixed(2)}) × 19% = ~${cuota.toFixed(2)} €${' '.repeat(Math.max(1, 15 - cuota.toFixed(2).length))}║\n`;
+  txt += '  ╠═════════════════════════════════════════════════════╣\n';
+  txt += '  ║ PENDIENTE VERIFICACIÓN MANUAL                      ║\n';
+  if (ajuste > 0) txt += '  ║  • Confirmar coste ETH original (fecha compra)    ║\n';
+  if (permCount > 0) txt += '  ║  • Permutas previas: verificar declaración previa  ║\n';
+  const vt0 = results.filter(r => r.valorTransmision === 0);
+  if (vt0.length) txt += `  ║  • ${vt0.length} ops con valor transmisión 0 €              ║\n`;
+  if (totalRCM === 0) txt += '  ║  • Calcular valor EUR de rewards para RCM          ║\n';
+  txt += '  ╚═════════════════════════════════════════════════════╝\n';
+
+  return txt;
+}
+
+async function downloadTXT() {
+  const btn = document.querySelector('.actions button:nth-child(2)');
+  btn.textContent = '⏳ Generando...'; btn.disabled = true;
+  const txt = await buildTXT();
+  download(`binance_fifo_resumen_${calcYear}.txt`, txt);
+  btn.textContent = 'Descargar resumen TXT'; btn.disabled = false;
+}
+
+async function copyTXT(btn) {
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Generando...'; btn.disabled = true;
+  const txt = await buildTXT();
+  await navigator.clipboard.writeText(txt);
+  btn.textContent = '✓ Copiado'; btn.disabled = false;
+  setTimeout(() => { btn.textContent = orig; }, 2000);
+}
+
+function download(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
