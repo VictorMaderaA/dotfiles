@@ -9,8 +9,26 @@
 # existing remote setup or a local override in ~/.env.local can replace them.
 
 # Locale defaults for SSH sessions and remote shells.
-export LANG="${LANG:-es_ES.UTF-8}"
-export LC_ALL="${LC_ALL:-es_ES.UTF-8}"
+#
+# Prefer Spanish when the system actually has that locale generated. Otherwise
+# fall back to a broadly available UTF-8 locale so tools like `man` do not emit
+# warnings about invalid LC_* values.
+if [ -z "${LANG:-}" ]; then
+    if locale -a 2>/dev/null | grep -qiE '^(es_ES\.utf8|es_ES\.UTF-8)$'; then
+        export LANG=es_ES.UTF-8
+    elif locale -a 2>/dev/null | grep -qiE '^(en_US\.utf8|en_US\.UTF-8|C\.UTF-8)$'; then
+        export LANG=en_US.UTF-8
+    else
+        export LANG=C.UTF-8
+    fi
+fi
+
+# Avoid forcing an unsupported LC_ALL. Leave it unset unless the caller already
+# provided one, because LC_ALL overrides LANG and is the usual source of this
+# warning when a locale is missing from the system.
+if [ -n "${LC_ALL:-}" ]; then
+    export LC_ALL
+fi
 
 # Fallback terminal type for shells started outside tmux or without a sane TERM.
 # Do not overwrite an existing TERM because tmux, Kitty, WezTerm or VS Code
