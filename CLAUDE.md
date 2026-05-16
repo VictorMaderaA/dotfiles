@@ -59,6 +59,17 @@ install.sh
 
 `config/symlinks.conf` define los mapeos `origen:destino`. El script crea symlinks recursivamente, incluyendo archivos ocultos. Los archivos preexistentes se guardan en `.dotfiles_backup/` con timestamp antes de sobrescribir.
 
+### Estándar de terminal remota
+
+El repositorio ya centraliza la capa que suele romperse por SSH, tmux y distintos clientes de terminal:
+
+- `dotfiles/shell/.terminal-env` define defaults compartidos de `LANG`, `LC_ALL` y un fallback seguro de `TERM`.
+- `dotfiles/shell/.bashrc`, `dotfiles/shell/.zshrc` y `dotfiles/shell/.profile` cargan ese bloque común para que login shells, shells interactivos y sesiones remotas se comporten igual.
+- `dotfiles/tools/.tmux.conf` fija los defaults comunes de tmux: `tmux-256color`, `RGB`, `escape-time 0`, `focus-events on`, `history-limit` alto y `set-clipboard on`.
+- `dotfiles/ssh/config` concentra los defaults compartidos de SSH. Los overrides por máquina o secretos siguen yendo a `dotfiles/ssh/config.local`.
+
+Regla práctica: si un ajuste afecta a todas tus máquinas, va en el fragmento compartido o en `ssh/config`; si cambia por host, usuario o secreto, va en `config.local` o `.env.local`.
+
 ### Librerías reutilizables (`scripts/lib/`)
 
 | Archivo | Propósito |

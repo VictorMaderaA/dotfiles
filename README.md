@@ -52,6 +52,7 @@ install.sh
   → Ejecuta instaladores en orden (base → terminal → development → docker → desktop/server)
   → Crea symlinks según config/symlinks.conf
   → Inicializa configs locales (.env.local, ssh/config.local)
+  → Despliega defaults compartidos de terminal, tmux y SSH para sesiones remotas
   → Backup automático de archivos previos en .dotfiles_backup/
 ```
 
@@ -60,6 +61,7 @@ install.sh
 ## Herramientas configuradas
 
 - **Shell**: Zsh + Starship + Tmux + Nerd Fonts
+- **Terminal remota**: defaults compartidos para `LANG`, `LC_ALL`, `TERM`, `tmux-256color` y keepalive SSH
 - **Git**: Aliases, SSH keys, configuración por repo
 - **Dev**: Pyenv, NVM, Neovim, Git-flow, AWS CLI, Pipx, Bitwarden CLI
 - **DevOps**: Docker (con soporte WSL), Tailscale
@@ -73,6 +75,12 @@ Dos archivos privados que el instalador inicializa pero no versiona:
 
 - `dotfiles/shell/.env.local` — tokens y variables privadas
 - `dotfiles/ssh/config.local` — hosts SSH privados (generado desde `config.local.template`)
+
+Configuración compartida relevante para terminales y SSH:
+
+- `dotfiles/shell/.terminal-env` — defaults versionados para `LANG`, `LC_ALL` y fallback seguro de `TERM`
+- `dotfiles/tools/.tmux.conf` — ajustes comunes para color, latencia de `Esc`, mouse y sesiones persistentes
+- `dotfiles/ssh/config` — hosts compartidos y keepalive; los overrides privados siguen yendo en `config.local`
 
 ---
 
