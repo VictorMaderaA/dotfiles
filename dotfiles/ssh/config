@@ -3,6 +3,9 @@ Include config.local
   Host proxmox-develop
     HostName proxmox-develop
     User develop
+    SetEnv TERM=xterm-256color
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
 
 Host qdevwebaws
     HostName qdevwebaws.quiter.com

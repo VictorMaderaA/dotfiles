@@ -17,6 +17,12 @@ if [ -d "$HOME/bin" ] ; then
     PATH="$HOME/bin:$PATH"
 fi
 
+# Load shared terminal defaults early so login shells inherit the same locale
+# and TERM fallbacks before any shell-specific RC files run.
+if [ -f "$HOME/.terminal-env" ] ; then
+    . "$HOME/.terminal-env"
+fi
+
 # if running bash
 if [ -n "$BASH_VERSION" ]; then
     # include .bashrc if it exists

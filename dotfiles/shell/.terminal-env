@@ -1,0 +1,20 @@
+# Terminal defaults shared by bash, zsh and login shells.
+#
+# Why this file exists:
+# - Keep locale and terminal fallbacks consistent across all devices.
+# - Avoid duplicating the same exports in .bashrc, .zshrc and .profile.
+# - Let per-host or per-user overrides still win when they are already set.
+#
+# The values are only applied when the variable is currently empty, so an
+# existing remote setup or a local override in ~/.env.local can replace them.
+
+# Locale defaults for SSH sessions and remote shells.
+export LANG="${LANG:-es_ES.UTF-8}"
+export LC_ALL="${LC_ALL:-es_ES.UTF-8}"
+
+# Fallback terminal type for shells started outside tmux or without a sane TERM.
+# Do not overwrite an existing TERM because tmux, Kitty, WezTerm or VS Code
+# Remote SSH may already negotiate a better value.
+if [ -z "${TERM:-}" ] || [ "$TERM" = "dumb" ]; then
+    export TERM=xterm-256color
+fi

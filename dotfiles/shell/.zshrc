@@ -1,6 +1,12 @@
 # Configuration for Zsh
 export ZSH_CUSTOM="$HOME/.config/zsh"
 
+# Load shared terminal defaults before other shell-specific setup so locale and
+# TERM behavior stays consistent across machines, SSH sessions and tmux.
+if [[ -f ~/.terminal-env ]]; then
+    source ~/.terminal-env
+fi
+
 # Source common aliases
 [[ -f ~/.shell_aliases ]] && source ~/.shell_aliases
 

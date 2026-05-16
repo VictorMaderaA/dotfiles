@@ -1,0 +1,9 @@
+# SSH Local Configuration Example
+# Copy this file to config.local and fill in your secrets.
+# This file is ignored by git.
+
+# Example Host
+# Host hetzner-mercury
+#     HostName 0.0.0.0
+#     User root
+#     IdentityFile ~/.ssh/id_rsa

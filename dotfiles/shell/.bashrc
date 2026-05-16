@@ -2,6 +2,12 @@
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
 # for examples
 
+# Load shared terminal defaults before the interactive-shell guard so the same
+# locale and TERM fallbacks also apply when ~/.bashrc is sourced from ~/.profile.
+if [ -f "$HOME/.terminal-env" ]; then
+    . "$HOME/.terminal-env"
+fi
+
 # If not running interactively, don't do anything
 case $- in
     *i*) ;;
