@@ -1,5 +1,9 @@
 Include config.local
 
+  Host proxmox-develop
+    HostName proxmox-develop
+    User develop
+
 Host qdevwebaws
     HostName qdevwebaws.quiter.com
     User rootquiter
@@ -16,7 +20,7 @@ Host devweb.quiter.com
     IdentityFile ~/.ssh/victor.madera@qdevweb
 
 Host git-codecommit.eu-central-1.amazonaws.com
-    Hostname git-codecommit.eu-central-1.amazonaws.com
+    HostName git-codecommit.eu-central-1.amazonaws.com
     Port 443
     User APKAQNWN7W2VZQTLNWOX
     IdentityFile ~/.ssh/narobialAws
@@ -25,7 +29,7 @@ Host git-codecommit.eu-central-1.amazonaws.com
 
 
 Host github.com
-    Hostname ssh.github.com
+    HostName ssh.github.com
     Port 443
     User git
     IdentityFile ~/.ssh/VictorMaderaA
