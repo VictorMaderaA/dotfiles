@@ -35,13 +35,21 @@ open_tool() {
 
     if [[ -n "$target" ]]; then
         echo -e "${GREEN}Abriendo $tool...${NC}"
-        # Detectar el comando para abrir el navegador
-        if command -v xdg-open &> /dev/null; then
+        if grep -qi microsoft /proc/version 2>/dev/null; then
+            # WSL: convertir ruta Linux a Windows y abrir con el navegador del host
+            if command -v wslview &> /dev/null; then
+                wslview "$target"
+            else
+                local win_path
+                win_path=$(wslpath -w "$target")
+                cmd.exe /c start "" "$win_path" 2>/dev/null
+            fi
+        elif command -v xdg-open &> /dev/null; then
             xdg-open "$target"
         elif command -v open &> /dev/null; then
             open "$target"
         else
-            echo "No se pudo encontrar un comando para abrir el navegador (xdg-open u open)."
+            echo "No se pudo encontrar un comando para abrir el navegador."
             echo "Ruta del archivo: $target"
         fi
     else
