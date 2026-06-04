@@ -1,0 +1,276 @@
+/* print.css — Solo se aplica al imprimir/exportar PDF */
+
+@media print {
+  /* Ocultar UI del editor */
+  header, .config-panel, .editor-pane, .pane-header { display: none !important; }
+
+  body {
+    background: white;
+    height: auto;
+    overflow: visible;
+  }
+
+  .editor-layout {
+    display: block;
+    overflow: visible;
+  }
+
+  .preview-pane {
+    display: block;
+    overflow: visible;
+    background: white;
+  }
+
+  .preview-content {
+    overflow: visible;
+    padding: 0;
+    color: #000;
+  }
+
+  /* --- Page defaults (overridden by preset classes on body) --- */
+  @page { margin: 2.5cm; }
+
+  /* Margins */
+  body.margin-narrow { }
+  body.margin-wide { }
+
+  /* Orientation */
+  body.orient-landscape { }
+
+  /* Page sizes + margins + orientation combined via @page */
+
+  /* Numeración de páginas */
+  body.page-numbers .preview-content {
+    counter-reset: page-num;
+  }
+  body.page-numbers .preview-content::after {
+    content: counter(page);
+    position: fixed;
+    bottom: 1cm;
+    right: 1.5cm;
+    font-size: 10px;
+    color: #666;
+  }
+
+  /* Portada */
+  body.cover-page .preview-content .cover {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    text-align: center;
+  }
+  body.cover-page .preview-content .cover h1 {
+    font-size: 2.5em;
+    border: none;
+    margin-bottom: 0.3em;
+  }
+  body.cover-page .preview-content .cover .cover-meta {
+    color: #666;
+    font-size: 1.1em;
+  }
+
+  /* Salto en H1 */
+  body.break-h1 .preview-content h1 {
+    page-break-before: always;
+  }
+  body.break-h1 .preview-content h1:first-child {
+    page-break-before: avoid;
+  }
+
+  /* =========================================
+     PRESETS
+     ========================================= */
+
+  /* --- Technical: monospace code focus --- */
+  body.preset-technical .preview-content {
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  body.preset-technical .preview-content pre {
+    background: #f4f4f4 !important;
+    color: #333 !important;
+    border: 1px solid #ddd;
+    padding: 12px;
+    font-size: 10px;
+    page-break-inside: avoid;
+  }
+  body.preset-technical .preview-content code {
+    background: #f0f0f0;
+    font-size: 0.85em;
+  }
+  body.preset-technical .preview-content table {
+    font-size: 11px;
+  }
+  body.preset-technical .preview-content h1 {
+    font-size: 1.6em;
+    border-bottom: 2px solid #333;
+  }
+  body.preset-technical .preview-content h2 {
+    font-size: 1.3em;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.15em;
+  }
+
+  /* --- Report: formal, serif, spacious --- */
+  body.preset-report .preview-content {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  body.preset-report .preview-content h1 {
+    font-size: 1.8em;
+    text-align: center;
+    border: none;
+    margin-top: 1em;
+  }
+  body.preset-report .preview-content h2 {
+    font-size: 1.4em;
+    margin-top: 1.5em;
+    border-bottom: 1px solid #999;
+  }
+  body.preset-report .preview-content blockquote {
+    border-left-color: #999;
+    font-style: italic;
+  }
+  body.preset-report .preview-content pre {
+    background: #f9f9f9 !important;
+    color: #333 !important;
+    border: 1px solid #ccc;
+    page-break-inside: avoid;
+  }
+
+  /* --- Notes: compact, small, efficient --- */
+  body.preset-notes .preview-content {
+    font-family: system-ui, sans-serif;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  body.preset-notes .preview-content h1 { font-size: 1.4em; margin: 0.3em 0; border: none; }
+  body.preset-notes .preview-content h2 { font-size: 1.2em; margin: 0.3em 0; }
+  body.preset-notes .preview-content h3 { font-size: 1.05em; margin: 0.2em 0; }
+  body.preset-notes .preview-content p { margin: 0.3em 0; }
+  body.preset-notes .preview-content ul, body.preset-notes .preview-content ol { margin: 0.2em 0; }
+  body.preset-notes .preview-content pre {
+    font-size: 9px;
+    padding: 8px;
+    background: #f4f4f4 !important;
+    color: #333 !important;
+    page-break-inside: avoid;
+  }
+
+  /* --- Article: readable, generous spacing --- */
+  body.preset-article .preview-content {
+    font-family: Georgia, serif;
+    font-size: 13px;
+    line-height: 1.9;
+    max-width: 65ch;
+  }
+  body.preset-article .preview-content h1 {
+    font-size: 2em;
+    border: none;
+    margin-bottom: 0.5em;
+  }
+  body.preset-article .preview-content h2 { font-size: 1.5em; margin-top: 1.5em; }
+  body.preset-article .preview-content p { margin: 0.8em 0; text-align: justify; }
+  body.preset-article .preview-content img { display: block; margin: 1.5em auto; }
+  body.preset-article .preview-content blockquote {
+    border-left: 3px solid #666;
+    padding: 0.8em 1.2em;
+    margin: 1.2em 0;
+    font-style: italic;
+  }
+  body.preset-article .preview-content pre {
+    background: #f8f8f8 !important;
+    color: #333 !important;
+    page-break-inside: avoid;
+  }
+
+  /* --- Presentation: big type, one section per page --- */
+  body.preset-presentation .preview-content {
+    font-family: system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  body.preset-presentation .preview-content h1 {
+    font-size: 2.2em;
+    border: none;
+    page-break-before: always;
+    margin-top: 2em;
+  }
+  body.preset-presentation .preview-content h1:first-child {
+    page-break-before: avoid;
+    margin-top: 0;
+  }
+  body.preset-presentation .preview-content h2 { font-size: 1.6em; margin-top: 1.5em; }
+  body.preset-presentation .preview-content p { font-size: 14px; margin: 0.8em 0; }
+  body.preset-presentation .preview-content pre {
+    font-size: 12px;
+    background: #f4f4f4 !important;
+    color: #333 !important;
+    page-break-inside: avoid;
+  }
+  body.preset-presentation .preview-content ul, body.preset-presentation .preview-content ol {
+    font-size: 14px;
+  }
+
+  /* General print optimizations */
+  .preview-content pre, .preview-content table, .preview-content img {
+    page-break-inside: avoid;
+  }
+  .preview-content h1, .preview-content h2, .preview-content h3 {
+    page-break-after: avoid;
+  }
+
+  /* =========================================
+     BRANDS
+     ========================================= */
+
+  /* --- Narobial --- */
+  body.brand-narobial .preview-content {
+    font-family: 'Montserrat', system-ui, sans-serif;
+  }
+  body.brand-narobial .preview-content h1,
+  body.brand-narobial .preview-content h2,
+  body.brand-narobial .preview-content h3 {
+    color: #5264c4;
+  }
+  body.brand-narobial .preview-content h1 {
+    border-bottom-color: #5264c4;
+  }
+  body.brand-narobial .preview-content blockquote {
+    border-left-color: #5264c4;
+  }
+  body.brand-narobial .cover {
+    border-bottom: 4px solid #5264c4;
+  }
+  body.brand-narobial .cover h1 {
+    color: #5264c4 !important;
+  }
+
+  /* --- InTable --- */
+  body.brand-intable .preview-content h1,
+  body.brand-intable .preview-content h2,
+  body.brand-intable .preview-content h3 {
+    color: #303030;
+  }
+  body.brand-intable .preview-content h1 {
+    border-bottom-color: #FFCE0A;
+  }
+  body.brand-intable .preview-content h2 {
+    border-bottom: 1px solid #FFE785;
+    padding-bottom: 0.15em;
+  }
+  body.brand-intable .preview-content blockquote {
+    border-left-color: #EA7D1A;
+  }
+  body.brand-intable .cover {
+    border-bottom: 4px solid #FFCE0A;
+  }
+  body.brand-intable .cover h1 {
+    color: #303030 !important;
+  }
+}

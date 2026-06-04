@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD → PDF</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="print.css" media="print">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>MD <span>→ PDF</span></h1>
+    <div class="toolbar">
+      <select id="brand" aria-label="Marca">
+        <option value="none">Sin marca</option>
+        <option value="narobial">Narobial</option>
+        <option value="intable">InTable</option>
+      </select>
+      <select id="preset" aria-label="Preset de documento">
+        <option value="technical">Documento técnico</option>
+        <option value="report">Informe / Report</option>
+        <option value="notes">Notas / Apuntes</option>
+        <option value="article">Artículo / Blog</option>
+        <option value="presentation">Presentación impresa</option>
+      </select>
+      <button id="btnConfig" type="button" aria-expanded="false" aria-controls="configPanel">⚙ Config</button>
+      <button id="btnExport" type="button">📄 Exportar PDF</button>
+    </div>
+  </header>
+
+  <div id="configPanel" class="config-panel hidden" role="region" aria-label="Configuración de documento">
+    <div class="config-group">
+      <label for="pageSize">Página</label>
+      <select id="pageSize">
+        <option value="A4">A4</option>
+        <option value="Letter">Letter</option>
+        <option value="Legal">Legal</option>
+      </select>
+    </div>
+    <div class="config-group">
+      <label for="orientation">Orientación</label>
+      <select id="orientation">
+        <option value="portrait">Vertical</option>
+        <option value="landscape">Horizontal</option>
+      </select>
+    </div>
+    <div class="config-group">
+      <label for="margins">Márgenes</label>
+      <select id="margins">
+        <option value="normal">Normal (2.5cm)</option>
+        <option value="narrow">Estrecho (1.5cm)</option>
+        <option value="wide">Ancho (3cm)</option>
+      </select>
+    </div>
+    <div class="config-group">
+      <label for="fontFamily">Fuente</label>
+      <select id="fontFamily">
+        <option value="system-ui, sans-serif">Sans-serif</option>
+        <option value="Georgia, serif">Serif</option>
+        <option value="'Courier New', monospace">Monospace</option>
+      </select>
+    </div>
+    <div class="config-group">
+      <label for="fontSize">Tamaño base</label>
+      <select id="fontSize">
+        <option value="11px">11px</option>
+        <option value="12px" selected>12px</option>
+        <option value="13px">13px</option>
+        <option value="14px">14px</option>
+      </select>
+    </div>
+    <div class="config-group">
+      <label for="pageNumbers">Nº página</label>
+      <input type="checkbox" id="pageNumbers" checked>
+    </div>
+    <div class="config-group">
+      <label for="coverPage">Portada</label>
+      <input type="checkbox" id="coverPage">
+    </div>
+    <div class="config-group">
+      <label for="breakOnH1">Salto en H1</label>
+      <input type="checkbox" id="breakOnH1">
+    </div>
+  </div>
+
+  <main class="editor-layout">
+    <section class="editor-pane" aria-label="Editor Markdown">
+      <div class="pane-header">
+        <span>Markdown</span>
+        <label class="drop-label" for="fileInput">📂 Abrir .md</label>
+        <input type="file" id="fileInput" accept=".md,.markdown,.txt">
+      </div>
+      <textarea id="editor" spellcheck="false" placeholder="Escribe o pega tu Markdown aquí..."></textarea>
+    </section>
+    <section class="preview-pane" aria-label="Preview">
+      <div class="pane-header"><span>Preview</span></div>
+      <div id="preview" class="preview-content"></div>
+    </section>
+  </main>
+
+  <script src="logos.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
