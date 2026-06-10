@@ -4,11 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MD → PDF</title>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" as="style">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="print.css" media="print">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js" defer></script>
 </head>
 <body>
   <header>
@@ -25,6 +29,18 @@
         <option value="notes">Notas / Apuntes</option>
         <option value="article">Artículo / Blog</option>
         <option value="presentation">Presentación impresa</option>
+      </select>
+      <button id="btnSavePreset" type="button" title="Guardar preset actual">💾</button>
+      <select id="template" aria-label="Template">
+        <option value="">📝 Template...</option>
+        <option value="cv">CV / Currículum</option>
+        <option value="acta">Acta de reunión</option>
+        <option value="propuesta">Propuesta técnica</option>
+      </select>
+      <select id="previewTheme" aria-label="Tema preview">
+        <option value="light">☀ Claro</option>
+        <option value="dark">🌙 Oscuro</option>
+        <option value="sepia">📜 Sepia</option>
       </select>
       <button id="btnConfig" type="button" aria-expanded="false" aria-controls="configPanel">⚙ Config</button>
       <button id="btnExport" type="button">📄 Exportar PDF</button>
@@ -84,22 +100,49 @@
       <label for="breakOnH1">Salto en H1</label>
       <input type="checkbox" id="breakOnH1">
     </div>
+    <div class="config-group">
+      <label for="autoTOC">TOC auto</label>
+      <input type="checkbox" id="autoTOC">
+    </div>
+    <div class="config-group">
+      <label for="watermark">Watermark</label>
+      <input type="text" id="watermark" placeholder="Ej: BORRADOR" class="config-input">
+    </div>
+    <div class="config-group">
+      <label for="headerText">Header</label>
+      <input type="text" id="headerText" placeholder="Texto header" class="config-input">
+    </div>
+    <div class="config-group">
+      <label for="bwMode">B&W</label>
+      <input type="checkbox" id="bwMode">
+    </div>
   </div>
 
   <main class="editor-layout">
-    <section class="editor-pane" aria-label="Editor Markdown">
+    <div class="mobile-tabs">
+      <button class="tab active" data-pane="editor">✏️ Editor</button>
+      <button class="tab" data-pane="preview">👁 Preview</button>
+    </div>
+    <section class="editor-pane mobile-visible" aria-label="Editor Markdown">
       <div class="pane-header">
         <span>Markdown</span>
+        <span id="wordCount" class="word-count"></span>
         <label class="drop-label" for="fileInput">📂 Abrir .md</label>
         <input type="file" id="fileInput" accept=".md,.markdown,.txt">
       </div>
-      <textarea id="editor" spellcheck="false" placeholder="Escribe o pega tu Markdown aquí..."></textarea>
+      <textarea id="editor" spellcheck="false" placeholder="Escribe o pega tu Markdown aquí..." aria-label="Editor de Markdown"></textarea>
     </section>
-    <section class="preview-pane" aria-label="Preview">
-      <div class="pane-header"><span>Preview</span></div>
-      <div id="preview" class="preview-content"></div>
+    <section class="preview-pane mobile-visible" aria-label="Preview">
+      <div class="pane-header">
+        <span>Preview</span>
+        <span class="render-dot" id="renderDot" title="Estado del render"></span>
+      </div>
+      <div id="preview" class="preview-content" aria-live="polite" aria-atomic="false"></div>
     </section>
   </main>
+
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+  <div id="srAnnouncer" role="status" aria-live="assertive" class="sr-only"></div>
 
   <script src="logos.js"></script>
   <script src="main.js"></script>

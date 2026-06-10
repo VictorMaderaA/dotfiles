@@ -1,8 +1,9 @@
 /* print.css — Solo se aplica al imprimir/exportar PDF */
 
 @media print {
-  /* Ocultar UI del editor */
-  header, .config-panel, .editor-pane, .pane-header { display: none !important; }
+  /* Ocultar UI */
+  header, .config-panel, .editor-pane, .pane-header,
+  .mobile-tabs, .toast-container, .sr-only { display: none !important; }
 
   body {
     background: white;
@@ -16,7 +17,7 @@
   }
 
   .preview-pane {
-    display: block;
+    display: block !important;
     overflow: visible;
     background: white;
   }
@@ -25,19 +26,73 @@
     overflow: visible;
     padding: 0;
     color: #000;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    line-height: 1.7;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
-  /* --- Page defaults (overridden by preset classes on body) --- */
+  /* Base typography for print (mirrors preview) */
+  .preview-content h1 { font-size: 2em; margin: 0.8em 0 0.4em; border-bottom: 2px solid #333; padding-bottom: 0.3em; font-weight: 700; letter-spacing: -0.02em; }
+  .preview-content h2 { font-size: 1.5em; margin: 1.2em 0 0.4em; border-bottom: 1px solid #ddd; padding-bottom: 0.2em; font-weight: 700; }
+  .preview-content h3 { font-size: 1.2em; margin: 1em 0 0.3em; font-weight: 700; }
+  .preview-content p { margin: 0.7em 0; line-height: 1.75; }
+  .preview-content ul, .preview-content ol { margin: 0.6em 0; padding-left: 1.8em; }
+  .preview-content li { margin: 0.3em 0; line-height: 1.7; }
+  .preview-content blockquote {
+    border-left: 4px solid #333;
+    margin: 1.2em 0;
+    padding: 0.8em 1.2em;
+    background: #f3f4f6 !important;
+    color: #444;
+    font-style: italic;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .preview-content code {
+    background: #e9ecef !important;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.88em;
+    font-family: 'Courier New', monospace;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .preview-content pre {
+    background: #f4f4f4 !important;
+    color: #333 !important;
+    padding: 14px 16px;
+    border-radius: 6px;
+    border: 1px solid #999;
+    margin: 1.2em 0;
+    font-size: 0.85em;
+    line-height: 1.5;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .preview-content pre code { background: none; padding: 0; color: inherit; border: none; }
+  .preview-content table { border-collapse: collapse; width: 100%; margin: 1.2em 0; }
+  .preview-content th, .preview-content td { border: 1px solid #999; padding: 8px 12px; text-align: left; }
+  .preview-content th {
+    background: #e9ecef !important;
+    font-weight: 600;
+    font-size: 0.9em;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .preview-content tr:nth-child(even) td {
+    background: #f4f5f7 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .preview-content img { max-width: 100%; height: auto; }
+  .preview-content hr { border: none; border-top: 2px solid #e5e7eb; margin: 2em 0; }
+  .preview-content a { color: #333; text-decoration: underline; }
+  .preview-content strong { font-weight: 700; }
+
+  /* Page defaults */
   @page { margin: 2.5cm; }
-
-  /* Margins */
-  body.margin-narrow { }
-  body.margin-wide { }
-
-  /* Orientation */
-  body.orient-landscape { }
-
-  /* Page sizes + margins + orientation combined via @page */
 
   /* Numeración de páginas */
   body.page-numbers .preview-content {
@@ -61,30 +116,68 @@
     align-items: center;
     min-height: 90vh;
     text-align: center;
+    padding: 3cm 2cm;
   }
   body.cover-page .preview-content .cover h1 {
-    font-size: 2.5em;
+    font-size: 2.8em;
     border: none;
-    margin-bottom: 0.3em;
+    margin-bottom: 0.4em;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
   }
   body.cover-page .preview-content .cover .cover-meta {
     color: #666;
     font-size: 1.1em;
+    margin-top: 1em;
+    letter-spacing: 0.02em;
   }
 
-  /* Salto en H1 */
-  body.break-h1 .preview-content h1 {
-    page-break-before: always;
+  /* Salto en H1 — excluir portada y primer h1 visible tras TOC/cover */
+  body.break-h1 .preview-content h1 { page-break-before: always; }
+  body.break-h1 .preview-content .cover h1,
+  body.break-h1 .preview-content h1:first-child,
+  body.break-h1.cover-page .preview-content .cover + * h1:first-of-type,
+  body.break-h1.cover-page .preview-content .toc + h1 { page-break-before: avoid; }
+  /* En report con portada, el H1 oculto no genera salto */
+  body.break-h1 .preview-content h1[style*="display: none"] { page-break-before: avoid; }
+
+  /* TOC */
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 1.4em; margin-bottom: 0.5em; }
+  .toc ul { list-style: none; padding: 0; }
+  .toc li { padding: 4px 0; font-size: 12px; border-bottom: 1px dotted #ddd; }
+
+  /* Watermark */
+  .watermark {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 80px;
+    color: rgba(0, 0, 0, 0.06);
+    font-weight: bold;
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 0;
+    white-space: nowrap;
   }
-  body.break-h1 .preview-content h1:first-child {
-    page-break-before: avoid;
+
+  /* Print header */
+  .print-header {
+    position: fixed;
+    top: 0.5cm;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: #999;
   }
 
   /* =========================================
      PRESETS
      ========================================= */
 
-  /* --- Technical: monospace code focus --- */
+  /* Technical */
   body.preset-technical .preview-content {
     font-family: system-ui, -apple-system, sans-serif;
     font-size: 12px;
@@ -98,52 +191,23 @@
     font-size: 10px;
     page-break-inside: avoid;
   }
-  body.preset-technical .preview-content code {
-    background: #f0f0f0;
-    font-size: 0.85em;
-  }
-  body.preset-technical .preview-content table {
-    font-size: 11px;
-  }
-  body.preset-technical .preview-content h1 {
-    font-size: 1.6em;
-    border-bottom: 2px solid #333;
-  }
-  body.preset-technical .preview-content h2 {
-    font-size: 1.3em;
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 0.15em;
-  }
+  body.preset-technical .preview-content code { background: #f0f0f0; font-size: 0.85em; }
+  body.preset-technical .preview-content table { font-size: 11px; }
+  body.preset-technical .preview-content h1 { font-size: 1.6em; border-bottom: 2px solid #333; }
+  body.preset-technical .preview-content h2 { font-size: 1.3em; border-bottom: 1px solid #ccc; padding-bottom: 0.15em; }
 
-  /* --- Report: formal, serif, spacious --- */
+  /* Report */
   body.preset-report .preview-content {
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 12px;
     line-height: 1.8;
   }
-  body.preset-report .preview-content h1 {
-    font-size: 1.8em;
-    text-align: center;
-    border: none;
-    margin-top: 1em;
-  }
-  body.preset-report .preview-content h2 {
-    font-size: 1.4em;
-    margin-top: 1.5em;
-    border-bottom: 1px solid #999;
-  }
-  body.preset-report .preview-content blockquote {
-    border-left-color: #999;
-    font-style: italic;
-  }
-  body.preset-report .preview-content pre {
-    background: #f9f9f9 !important;
-    color: #333 !important;
-    border: 1px solid #ccc;
-    page-break-inside: avoid;
-  }
+  body.preset-report .preview-content h1 { font-size: 1.8em; text-align: center; border: none; margin-top: 1em; }
+  body.preset-report .preview-content h2 { font-size: 1.4em; margin-top: 1.5em; border-bottom: 1px solid #999; }
+  body.preset-report .preview-content blockquote { border-left-color: #999; font-style: italic; }
+  body.preset-report .preview-content pre { background: #f9f9f9 !important; color: #333 !important; border: 1px solid #ccc; page-break-inside: avoid; }
 
-  /* --- Notes: compact, small, efficient --- */
+  /* Notes */
   body.preset-notes .preview-content {
     font-family: system-ui, sans-serif;
     font-size: 10px;
@@ -154,123 +218,122 @@
   body.preset-notes .preview-content h3 { font-size: 1.05em; margin: 0.2em 0; }
   body.preset-notes .preview-content p { margin: 0.3em 0; }
   body.preset-notes .preview-content ul, body.preset-notes .preview-content ol { margin: 0.2em 0; }
-  body.preset-notes .preview-content pre {
-    font-size: 9px;
-    padding: 8px;
-    background: #f4f4f4 !important;
-    color: #333 !important;
-    page-break-inside: avoid;
-  }
+  body.preset-notes .preview-content pre { font-size: 9px; padding: 8px; background: #f4f4f4 !important; color: #333 !important; page-break-inside: avoid; }
 
-  /* --- Article: readable, generous spacing --- */
+  /* Article */
   body.preset-article .preview-content {
     font-family: Georgia, serif;
     font-size: 13px;
     line-height: 1.9;
     max-width: 65ch;
   }
-  body.preset-article .preview-content h1 {
-    font-size: 2em;
-    border: none;
-    margin-bottom: 0.5em;
-  }
+  body.preset-article .preview-content h1 { font-size: 2em; border: none; margin-bottom: 0.5em; }
   body.preset-article .preview-content h2 { font-size: 1.5em; margin-top: 1.5em; }
   body.preset-article .preview-content p { margin: 0.8em 0; text-align: justify; }
   body.preset-article .preview-content img { display: block; margin: 1.5em auto; }
-  body.preset-article .preview-content blockquote {
-    border-left: 3px solid #666;
-    padding: 0.8em 1.2em;
-    margin: 1.2em 0;
-    font-style: italic;
-  }
-  body.preset-article .preview-content pre {
-    background: #f8f8f8 !important;
-    color: #333 !important;
-    page-break-inside: avoid;
-  }
+  body.preset-article .preview-content blockquote { border-left: 3px solid #666; padding: 0.8em 1.2em; margin: 1.2em 0; font-style: italic; }
+  body.preset-article .preview-content pre { background: #f8f8f8 !important; color: #333 !important; page-break-inside: avoid; }
 
-  /* --- Presentation: big type, one section per page --- */
+  /* Presentation */
   body.preset-presentation .preview-content {
     font-family: system-ui, sans-serif;
     font-size: 16px;
     line-height: 1.6;
   }
-  body.preset-presentation .preview-content h1 {
-    font-size: 2.2em;
-    border: none;
-    page-break-before: always;
-    margin-top: 2em;
-  }
-  body.preset-presentation .preview-content h1:first-child {
-    page-break-before: avoid;
-    margin-top: 0;
-  }
+  body.preset-presentation .preview-content h1 { font-size: 2.2em; border: none; page-break-before: always; margin-top: 2em; }
+  body.preset-presentation .preview-content h1:first-child { page-break-before: avoid; margin-top: 0; }
   body.preset-presentation .preview-content h2 { font-size: 1.6em; margin-top: 1.5em; }
   body.preset-presentation .preview-content p { font-size: 14px; margin: 0.8em 0; }
-  body.preset-presentation .preview-content pre {
-    font-size: 12px;
-    background: #f4f4f4 !important;
-    color: #333 !important;
-    page-break-inside: avoid;
-  }
-  body.preset-presentation .preview-content ul, body.preset-presentation .preview-content ol {
-    font-size: 14px;
-  }
+  body.preset-presentation .preview-content pre { font-size: 12px; background: #f4f4f4 !important; color: #333 !important; page-break-inside: avoid; }
+  body.preset-presentation .preview-content ul, body.preset-presentation .preview-content ol { font-size: 14px; }
 
   /* General print optimizations */
-  .preview-content pre, .preview-content table, .preview-content img {
-    page-break-inside: avoid;
-  }
+  .preview-content pre, .preview-content table, .preview-content img, .preview-content .mermaid { page-break-inside: avoid; }
+
+  /* Prevent orphan headings: heading must stay with following content */
   .preview-content h1, .preview-content h2, .preview-content h3 {
     page-break-after: avoid;
+    break-after: avoid;
+    orphans: 3;
+    widows: 3;
   }
+
+  /* Keep heading + next sibling together (prevents heading alone at bottom of page) */
+  .preview-content h1 + *, .preview-content h2 + *, .preview-content h3 + *,
+  .preview-content h1 + * + *, .preview-content h2 + * + * {
+    page-break-before: avoid;
+    break-before: avoid;
+  }
+
+  /* Mermaid diagrams: limit size and keep with preceding heading */
+  .preview-content .mermaid {
+    page-break-inside: avoid;
+    text-align: center;
+    margin: 0.8em auto;
+    max-height: 65vh;
+    overflow: visible;
+  }
+  .preview-content .mermaid svg {
+    max-width: 100%;
+    max-height: 65vh;
+    width: auto;
+    height: auto;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Task lists in print */
+  .preview-content .task-item { list-style: none; }
+  .preview-content .task-item input[type="checkbox"] { margin-right: 6px; }
 
   /* =========================================
      BRANDS
      ========================================= */
 
-  /* --- Narobial --- */
-  body.brand-narobial .preview-content {
-    font-family: 'Montserrat', system-ui, sans-serif;
-  }
+  /* Narobial */
+  body.brand-narobial .preview-content { font-family: 'Montserrat', system-ui, sans-serif; }
   body.brand-narobial .preview-content h1,
   body.brand-narobial .preview-content h2,
-  body.brand-narobial .preview-content h3 {
-    color: #5264c4;
-  }
-  body.brand-narobial .preview-content h1 {
-    border-bottom-color: #5264c4;
-  }
-  body.brand-narobial .preview-content blockquote {
-    border-left-color: #5264c4;
-  }
-  body.brand-narobial .cover {
-    border-bottom: 4px solid #5264c4;
-  }
-  body.brand-narobial .cover h1 {
-    color: #5264c4 !important;
-  }
+  body.brand-narobial .preview-content h3 { color: #5264c4; }
+  body.brand-narobial .preview-content h1 { border-bottom: 2px solid #5264c4; }
+  body.brand-narobial .preview-content h2 { border-bottom: 1px solid rgba(82, 100, 196, 0.3); }
+  body.brand-narobial .preview-content blockquote { border-left-color: #5264c4; background: rgba(82, 100, 196, 0.04); }
+  body.brand-narobial .preview-content th { background: rgba(82, 100, 196, 0.08); }
+  body.brand-narobial .preview-content a { color: #5264c4; }
+  body.brand-narobial .cover { border-bottom: 4px solid #5264c4; }
+  body.brand-narobial .cover h1 { color: #5264c4 !important; }
 
-  /* --- InTable --- */
+  /* InTable */
   body.brand-intable .preview-content h1,
   body.brand-intable .preview-content h2,
-  body.brand-intable .preview-content h3 {
-    color: #303030;
-  }
-  body.brand-intable .preview-content h1 {
-    border-bottom-color: #FFCE0A;
-  }
-  body.brand-intable .preview-content h2 {
-    border-bottom: 1px solid #FFE785;
-    padding-bottom: 0.15em;
-  }
-  body.brand-intable .preview-content blockquote {
-    border-left-color: #EA7D1A;
-  }
-  body.brand-intable .cover {
-    border-bottom: 4px solid #FFCE0A;
-  }
-  body.brand-intable .cover h1 {
-    color: #303030 !important;
-  }
+  body.brand-intable .preview-content h3 { color: #303030; }
+  body.brand-intable .preview-content h1 { border-bottom: 3px solid #FFCE0A; }
+  body.brand-intable .preview-content h2 { border-bottom: 2px solid #FFE785; padding-bottom: 0.2em; }
+  body.brand-intable .preview-content blockquote { border-left: 4px solid #EA7D1A; background: rgba(234, 125, 26, 0.04); }
+  body.brand-intable .preview-content th { background: rgba(255, 206, 10, 0.1); }
+  body.brand-intable .preview-content a { color: #EA7D1A; }
+  body.brand-intable .cover { border-bottom: 5px solid #FFCE0A; }
+  body.brand-intable .cover h1 { color: #303030 !important; }
+
+  /* =========================================
+     B&W MODE — High contrast for physical printing
+     ========================================= */
+  body.bw-mode .preview-content,
+  body.bw-mode .preview-content h1,
+  body.bw-mode .preview-content h2,
+  body.bw-mode .preview-content h3,
+  body.bw-mode .preview-content a,
+  body.bw-mode .preview-content blockquote,
+  body.bw-mode .preview-content code { color: #000 !important; }
+
+  body.bw-mode .preview-content h1 { border-bottom: 2px solid #000 !important; }
+  body.bw-mode .preview-content h2 { border-bottom: 1px solid #666 !important; }
+  body.bw-mode .preview-content blockquote { border-left: 4px solid #000 !important; background: #f5f5f5 !important; }
+  body.bw-mode .preview-content th { background: #eee !important; }
+  body.bw-mode .preview-content code { background: #eee !important; color: #000 !important; }
+  body.bw-mode .preview-content pre { background: #f5f5f5 !important; color: #000 !important; border: 1px solid #999 !important; }
+  body.bw-mode .preview-content a { text-decoration: underline !important; }
+  body.bw-mode .cover { border-bottom-color: #000 !important; }
+  body.bw-mode .cover h1 { color: #000 !important; }
+  body.bw-mode .preview-content .mermaid { filter: grayscale(1) contrast(1.2); }
 }
