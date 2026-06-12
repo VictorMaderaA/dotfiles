@@ -1,0 +1,318 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+# ─── Colores ──────────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'
+BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
+
+# ─── Defaults ─────────────────────────────────────────────────────────────────
+FORMAT="mp4"
+FORMAT_SET=""
+OUTPUT_DIR="${HOME}/Downloads"
+PARALLEL=3
+MAX_RETRIES=3
+URLS=()
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+die()  { echo -e "${RED}❌ $*${NC}" >&2; exit 1; }
+info() { echo -e "${BLUE}$*${NC}"; }
+ok()   { echo -e "${GREEN}$*${NC}"; }
+warn() { echo -e "${YELLOW}$*${NC}"; }
+
+usage() {
+  cat <<EOF
+Uso: yt-batch [opciones] [url1 url2 ... | archivo]
+
+Opciones:
+  -f, --format <mp3|mp4>   Formato de descarga (default: mp4)
+  -o, --output-dir <dir>   Directorio destino (default: ~/Downloads)
+  -p, --parallel <n>       Descargas simultáneas (default: 3)
+  -r, --retries <n>        Reintentos por URL (default: 3)
+  -h, --help               Muestra esta ayuda
+
+Modos:
+  Sin argumentos           → Modo interactivo
+  Con URLs/archivo         → Descarga directa
+
+Extrae automáticamente URLs de YouTube de cualquier texto/archivo.
+EOF
+  exit 0
+}
+
+# ─── Extracción inteligente de URLs de YouTube ────────────────────────────────
+extract_youtube_urls() {
+  grep -oP '(https?://)?(www\.)?(youtube\.com/watch\?[^\s,;"<>]*|youtu\.be/[A-Za-z0-9_-]{11}[^\s,;"<>]*|youtube\.com/shorts/[A-Za-z0-9_-]{11}[^\s,;"<>]*)' \
+    | sed 's/[,;)>"'\'']*$//' \
+    | sort -u
+}
+
+# ─── Extraer video ID de una URL ──────────────────────────────────────────────
+extract_video_id() {
+  echo "$1" | grep -oP '(?:v=|youtu\.be/|shorts/)[A-Za-z0-9_-]{11}' | grep -oP '[A-Za-z0-9_-]{11}$'
+}
+
+# ─── Detectar browser para cookies ───────────────────────────────────────────
+detect_browser() {
+  for browser in firefox chrome chromium brave; do
+    command -v "${browser}" &>/dev/null && echo "${browser}" && return
+  done
+}
+
+# ─── Comprobar si ya existe el archivo descargado ─────────────────────────────
+already_downloaded() {
+  local video_id="$1" ext="${FORMAT}"
+  find "${OUTPUT_DIR}" -maxdepth 1 -name "*${video_id}*.${ext}" 2>/dev/null | grep -q .
+}
+
+# ─── Modo interactivo ─────────────────────────────────────────────────────────
+interactive_mode() {
+  echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
+  echo -e "${CYAN}║     🎬  yt-batch — Descarga por lotes    ║${NC}"
+  echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
+  echo ""
+
+  # Formato
+  if [[ -z "${FORMAT_SET}" ]]; then
+    echo -e "${BLUE}Formato de descarga:${NC}"
+    echo "  1) mp4 (video)"
+    echo "  2) mp3 (audio)"
+    read -rp "Selecciona [1]: " fmt_choice
+    [[ "${fmt_choice}" == "2" ]] && FORMAT="mp3"
+  fi
+  echo ""
+
+  # Directorio
+  read -rp "$(echo -e "${BLUE}Directorio destino${NC} [${OUTPUT_DIR}]: ")" custom_dir
+  [[ -n "${custom_dir}" ]] && OUTPUT_DIR="${custom_dir}"
+  echo ""
+
+  # URLs
+  echo -e "${BLUE}Introduce URLs o ruta a archivo con enlaces.${NC}"
+  echo -e "${YELLOW}(Pega texto, URLs, o ruta a archivo. Línea vacía para terminar)${NC}"
+  echo ""
+
+  local raw_input=""
+  while IFS= read -r line; do
+    [[ -z "${line}" ]] && break
+    raw_input+="${line}"$'\n'
+  done
+
+  # Si es una ruta a archivo existente (una sola línea)
+  local trimmed
+  trimmed="$(echo "${raw_input}" | sed '/^$/d')"
+  if [[ $(echo "${trimmed}" | wc -l) -eq 1 ]] && [[ -f "${trimmed}" ]]; then
+    raw_input="$(cat "${trimmed}")"
+  fi
+
+  mapfile -t URLS < <(printf '%s\n' "${raw_input}" | extract_youtube_urls)
+
+  if [[ ${#URLS[@]} -eq 0 ]]; then
+    die "No se encontraron URLs de YouTube en la entrada."
+  fi
+
+  echo ""
+  ok "📋 ${#URLS[@]} URLs detectadas:"
+  local i
+  for i in "${!URLS[@]}"; do
+    echo "  $((i+1)). ${URLS[$i]}"
+  done
+  echo ""
+  info "📂 Destino : ${OUTPUT_DIR}"
+  info "📦 Formato : ${FORMAT}"
+  info "⚡ Paralelo: ${PARALLEL} | Reintentos: ${MAX_RETRIES}"
+  echo ""
+  read -rp "$(echo -e "${BLUE}¿Proceder? [S/n]:${NC} ")" confirm
+  [[ "${confirm,,}" == "n" ]] && exit 0
+}
+
+# ─── Parse argumentos ─────────────────────────────────────────────────────────
+positional=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f|--format) FORMAT="${2,,}"; FORMAT_SET=1; shift 2 ;;
+    -o|--output-dir) OUTPUT_DIR="$2"; shift 2 ;;
+    -p|--parallel) PARALLEL="$2"; shift 2 ;;
+    -r|--retries) MAX_RETRIES="$2"; shift 2 ;;
+    -h|--help) usage ;;
+    *) positional+=("$1"); shift ;;
+  esac
+done
+
+[[ "${FORMAT}" != "mp3" && "${FORMAT}" != "mp4" ]] && die "Formato inválido: ${FORMAT} (usa mp3 o mp4)"
+
+# Si hay argumentos posicionales, procesar como archivo o URLs directas
+if [[ ${#positional[@]} -gt 0 ]]; then
+  raw=""
+  for arg in "${positional[@]}"; do
+    if [[ -f "${arg}" ]]; then
+      raw+="$(cat "${arg}")"$'\n'
+    else
+      raw+="${arg}"$'\n'
+    fi
+  done
+  mapfile -t URLS < <(printf '%s\n' "${raw}" | extract_youtube_urls)
+fi
+
+# ─── Ejecución ────────────────────────────────────────────────────────────────
+command -v yt-dlp &>/dev/null || die "yt-dlp no instalado. Ejecuta: pip3 install yt-dlp"
+
+if [[ ${#URLS[@]} -eq 0 ]]; then
+  interactive_mode
+fi
+
+if [[ ${#URLS[@]} -eq 0 ]]; then
+  die "No se encontraron URLs."
+fi
+
+mkdir -p "${OUTPUT_DIR}"
+
+# Exportar cookies a archivo (una sola vez, evita locks en paralelo)
+COOKIE_FILE="$(mktemp /tmp/yt-batch-cookies.XXXXXX.txt)"
+browser="$(detect_browser || true)"
+if [[ -n "${browser}" ]]; then
+  info "🍪 Exportando cookies de ${browser}..."
+  yt-dlp --cookies-from-browser "${browser}" --cookies "${COOKIE_FILE}" \
+    --skip-download --quiet --no-warnings "https://www.youtube.com/watch?v=dQw4w9WgXcQ" 2>/dev/null
+  if [[ ! -s "${COOKIE_FILE}" ]]; then
+    warn "⚠️  No se pudieron exportar cookies, continuando sin ellas"
+    COOKIE_FILE=""
+  fi
+else
+  COOKIE_FILE=""
+fi
+
+total=${#URLS[@]}
+RESULT_DIR="$(mktemp -d)"
+
+# ─── Cleanup y manejo de señales ──────────────────────────────────────────────
+cleanup() {
+  jobs -p | xargs -r kill 2>/dev/null
+  wait 2>/dev/null
+  find "${OUTPUT_DIR}" -name "*.part" -newer "${RESULT_DIR}" -delete 2>/dev/null
+  local done_count failed_count
+  done_count=$(find "${RESULT_DIR}" -name "ok_*" 2>/dev/null | wc -l)
+  failed_count=$(find "${RESULT_DIR}" -name "fail_*" 2>/dev/null | wc -l)
+  echo ""
+  warn "⚠️  Interrumpido — ${done_count}/${total} completados, ${failed_count} fallidos"
+  rm -rf "${RESULT_DIR}"
+  [[ -n "${COOKIE_FILE}" ]] && rm -f "${COOKIE_FILE}"
+  exit 130
+}
+trap cleanup SIGINT SIGTERM
+trap 'rm -rf "${RESULT_DIR}"; [[ -n "${COOKIE_FILE}" ]] && rm -f "${COOKIE_FILE}"' EXIT
+
+echo ""
+info "⏳ Descargando ${total} archivo(s) en ${FORMAT} (×${PARALLEL} paralelo, ${MAX_RETRIES} reintentos)..."
+echo ""
+
+# ─── Generar script de worker (hereda todo sin necesidad de export -f) ────────
+WORKER_SCRIPT="$(mktemp /tmp/yt-batch-worker.XXXXXX.sh)"
+cat > "${WORKER_SCRIPT}" <<'WORKER_EOF'
+#!/usr/bin/env bash
+set -uo pipefail
+URL="$1"; IDX="$2"; TOTAL="$3"; RESULT_DIR="$4"
+FORMAT="$5"; OUTPUT_DIR="$6"; MAX_RETRIES="$7"; COOKIE_FILE="$8"
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'
+BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
+
+CLIENTS=("android_vr,web" "tv,android_vr" "web,mweb")
+
+cookie_args=()
+[[ -n "${COOKIE_FILE}" && -f "${COOKIE_FILE}" ]] && cookie_args=(--cookies "${COOKIE_FILE}")
+
+js_args=()
+command -v node &>/dev/null && js_args=(--js-runtimes node --remote-components ejs:github)
+
+format_args=()
+if [[ "${FORMAT}" == "mp3" ]]; then
+  format_args=(-x --audio-format mp3 --audio-quality 0)
+else
+  fmt="bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+  command -v ffmpeg &>/dev/null || fmt="b"
+  format_args=(-f "${fmt}" --merge-output-format mp4)
+fi
+
+common_args=(
+  "${format_args[@]}"
+  "${cookie_args[@]}"
+  "${js_args[@]}"
+  --no-playlist
+  --retries 5
+  --fragment-retries 5
+  --concurrent-fragments 4
+  --continue
+  --quiet --progress
+  --no-warnings
+  -o "${OUTPUT_DIR}/%(title).100B.%(ext)s"
+  --replace-in-metadata title '[\\/:*?"<>|]' '_'
+)
+
+echo -e "${CYAN}━━━ [${IDX}/${TOTAL}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}🔗 ${URL}${NC}"
+
+for attempt in $(seq 1 "${MAX_RETRIES}"); do
+  client="${CLIENTS[$(( (attempt - 1) % ${#CLIENTS[@]} ))]}"
+  if yt-dlp --extractor-args "youtube:player_client=${client}" \
+    "${common_args[@]}" "${URL}" 2>/dev/null; then
+    echo -e "  ${GREEN}✅ [${IDX}/${TOTAL}] Completado${NC}"
+    touch "${RESULT_DIR}/ok_${IDX}"
+    exit 0
+  fi
+  if [[ ${attempt} -lt ${MAX_RETRIES} ]]; then
+    echo -e "  ${YELLOW}↻ Reintento ${attempt}/${MAX_RETRIES}...${NC}"
+    sleep "$((attempt * 2))"
+  fi
+done
+
+echo -e "  ${RED}❌ [${IDX}/${TOTAL}] Falló${NC}"
+echo "${URL}" > "${RESULT_DIR}/fail_${IDX}"
+exit 1
+WORKER_EOF
+chmod +x "${WORKER_SCRIPT}"
+
+# ─── Ejecución paralela ──────────────────────────────────────────────────────
+active_jobs=0
+for i in "${!URLS[@]}"; do
+  url="${URLS[$i]}"
+  idx=$((i + 1))
+
+  # Skip si ya existe
+  video_id="$(extract_video_id "${url}" || true)"
+  if [[ -n "${video_id}" ]] && already_downloaded "${video_id}"; then
+    echo -e "  ${YELLOW}⏭ [${idx}/${total}] Ya existe${NC}"
+    touch "${RESULT_DIR}/ok_${idx}"
+    continue
+  fi
+
+  bash "${WORKER_SCRIPT}" "${url}" "${idx}" "${total}" "${RESULT_DIR}" \
+    "${FORMAT}" "${OUTPUT_DIR}" "${MAX_RETRIES}" "${COOKIE_FILE}" &
+  active_jobs=$((active_jobs + 1))
+
+  sleep 1
+
+  if [[ ${active_jobs} -ge ${PARALLEL} ]]; then
+    wait -n 2>/dev/null || true
+    active_jobs=$((active_jobs - 1))
+  fi
+done
+
+wait
+
+# ─── Limpieza del worker script ───────────────────────────────────────────────
+rm -f "${WORKER_SCRIPT}"
+
+# ─── Resumen ──────────────────────────────────────────────────────────────────
+ok_count=$(find "${RESULT_DIR}" -name "ok_*" | wc -l)
+fail_count=$(find "${RESULT_DIR}" -name "fail_*" | wc -l)
+
+echo ""
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+ok "✅ ${ok_count}/${total} completados"
+if [[ ${fail_count} -gt 0 ]]; then
+  warn "❌ Fallidos: ${fail_count}"
+  for f in "${RESULT_DIR}"/fail_*; do
+    [[ -f "${f}" ]] && echo "   $(cat "${f}")"
+  done
+fi
+info "📂 ${OUTPUT_DIR}"
