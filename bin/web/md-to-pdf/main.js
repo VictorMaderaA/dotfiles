@@ -355,8 +355,8 @@ function exportPDF() {
   const savedTitle = document.title;
   const firstH1 = preview.querySelector('h1:not([style*="display: none"])');
   const rawName = loadedFileName || (firstH1 ? firstH1.textContent.trim() : '') || 'documento';
-  // Remove filesystem-unsafe chars: / \ : * ? " < > |
-  const docName = rawName.replace(/[/\\:*?"<>|]/g, '').trim() || 'documento';
+  // Remove filesystem-unsafe chars and replace spaces with hyphens
+  const docName = rawName.replace(/[/\\:*?"<>|]/g, '').replace(/\s+/g, '-').trim() || 'documento';
   document.title = docName;
 
   window.addEventListener('afterprint', cleanup, { once: true });
