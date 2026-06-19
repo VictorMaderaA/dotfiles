@@ -355,8 +355,8 @@ function exportPDF() {
   const savedTitle = document.title;
   const firstH1 = preview.querySelector('h1:not([style*="display: none"])');
   const rawName = loadedFileName || (firstH1 ? firstH1.textContent.trim() : '') || 'documento';
-  // Strip diacritics, remove unsafe chars, replace spaces with hyphens
-  const docName = rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[/\\:*?"<>|]/g, '').replace(/\s+/g, '-').trim() || 'documento';
+  // Strip diacritics, normalize dashes, remove unsafe chars, replace spaces with hyphens, collapse multiple hyphens
+  const docName = rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-').replace(/[/\\:*?"<>|]/g, '').replace(/\s+/g, '-').replace(/-{2,}/g, '-').trim() || 'documento';
   document.title = docName;
 
   window.addEventListener('afterprint', cleanup, { once: true });
