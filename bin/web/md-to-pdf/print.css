@@ -29,6 +29,7 @@
     font-family: system-ui, -apple-system, sans-serif;
     font-size: 12px;
     line-height: 1.7;
+    position: relative;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
@@ -94,17 +95,9 @@
   /* Page defaults */
   @page { margin: 2.5cm; }
 
-  /* Numeración de páginas */
+  /* Numeración de páginas — sin position:fixed para compatibilidad PDF */
   body.page-numbers .preview-content {
     counter-reset: page-num;
-  }
-  body.page-numbers .preview-content::after {
-    content: counter(page);
-    position: fixed;
-    bottom: 1cm;
-    right: 1.5cm;
-    font-size: 10px;
-    color: #666;
   }
 
   /* Portada */
@@ -149,7 +142,7 @@
 
   /* Watermark */
   .watermark {
-    position: fixed;
+    position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(-45deg);
@@ -160,17 +153,18 @@
     pointer-events: none;
     z-index: 0;
     white-space: nowrap;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   /* Print header */
   .print-header {
-    position: fixed;
-    top: 0.5cm;
-    left: 0;
-    right: 0;
     text-align: center;
     font-size: 9px;
     color: #999;
+    margin-bottom: 1em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid #eee;
   }
 
   /* =========================================

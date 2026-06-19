@@ -353,8 +353,10 @@ function exportPDF() {
 
   // Set document title for PDF filename suggestion
   const savedTitle = document.title;
-  const firstH1 = preview.querySelector('h1');
-  const docName = loadedFileName || (firstH1 ? firstH1.textContent.trim() : '') || 'documento';
+  const firstH1 = preview.querySelector('h1:not([style*="display: none"])');
+  const rawName = loadedFileName || (firstH1 ? firstH1.textContent.trim() : '') || 'documento';
+  // Remove filesystem-unsafe chars: / \ : * ? " < > |
+  const docName = rawName.replace(/[/\\:*?"<>|]/g, '').trim() || 'documento';
   document.title = docName;
 
   window.addEventListener('afterprint', cleanup, { once: true });
@@ -427,7 +429,7 @@ function injectHeader() {
   const el = document.createElement('div');
   el.className = 'print-header';
   el.textContent = text;
-  preview.appendChild(el);
+  preview.insertBefore(el, preview.firstChild);
 }
 
 // --- File loading ---
