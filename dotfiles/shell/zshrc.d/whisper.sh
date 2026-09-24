@@ -199,8 +199,10 @@ DOCKERFILE
 
   local docker_cmd=(
     docker run --rm
+    --user "$(id -u):$(id -g)"
+    -e HOME=/home/whisperx
     -v "$tmpdir:/app"
-    -v "$hf_cache:/root/.cache/huggingface"
+    -v "$hf_cache:/home/whisperx/.cache/huggingface"
   )
 
   $use_gpu && docker_cmd+=(--gpus all)

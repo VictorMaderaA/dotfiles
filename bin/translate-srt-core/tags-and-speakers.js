@@ -1,8 +1,9 @@
 // tags-and-speakers.js
-'use strict';
+"use strict";
 
 // [MUSIC], [APPLAUSE], ♪ ... ♪, (laughs), etiquetas HTML, etc.
-const TAG_PATTERN = /(\[[^\]]+\]|♪[^♪\n]*♪|♪|\([^)\n]{1,40}\)|<[a-zA-Z/][^>]*>)/g;
+const TAG_PATTERN =
+  /(\[[^\]]+\]|♪[^♪\n]*♪|♪|\([^)\n]{1,40}\)|<[a-zA-Z/][^>]*>)/g;
 
 // [SPEAKER_06]:, [S1]:, [John]:, SPEAKER 1:
 const SPEAKER_TAG_PATTERN = /\[([A-Z_a-z0-9 ]+)\]:\s*/g;
@@ -11,52 +12,52 @@ const SPEAKER_TAG_PATTERN = /\[([A-Z_a-z0-9 ]+)\]:\s*/g;
  * Sustituye etiquetas no textuales por placeholders únicos.
  */
 function protectTags(text) {
-    const map = new Map();
-    let counter = 0;
-    const result = text.replace(TAG_PATTERN, match => {
-        const key = `__T${counter++}__`;
-        map.set(key, match);
-        return key;
-    });
-    return { protectedText: result, tagMap: map };
+  const map = new Map();
+  let counter = 0;
+  const result = text.replace(TAG_PATTERN, (match) => {
+    const key = `__T${counter++}__`;
+    map.set(key, match);
+    return key;
+  });
+  return { protectedText: result, tagMap: map };
 }
 
 /**
  * Restaura placeholders a sus etiquetas originales.
  */
 function restoreTags(text, map) {
-    let result = text;
-    for (const [key, value] of map) {
-        result = result.replaceAll(key, value);
-    }
-    return result;
+  let result = text;
+  for (const [key, value] of map) {
+    result = result.replaceAll(key, value);
+  }
+  return result;
 }
 
 /**
  * Extrae hablantes únicos del archivo y les asigna una letra (A, B, C…).
  */
 function buildSpeakerMap(subtitles) {
-    const map = new Map();
-    const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-    for (const sub of subtitles) {
-        for (const match of sub.text.matchAll(SPEAKER_TAG_PATTERN)) {
-            const id = match[1].trim();
-            if (!map.has(id)) {
-                map.set(id, labels[map.size] ?? `S${map.size + 1}`);
-            }
-        }
+  const map = new Map();
+  const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  for (const sub of subtitles) {
+    for (const match of sub.text.matchAll(SPEAKER_TAG_PATTERN)) {
+      const id = match[1].trim();
+      if (!map.has(id)) {
+        map.set(id, labels[map.size] ?? `S${map.size + 1}`);
+      }
     }
-    return map;
+  }
+  return map;
 }
 
 /**
  * [SPEAKER_06]: texto → A: texto
  */
 function normalizeSpeakerTags(text, speakerMap) {
-    return text.replace(SPEAKER_TAG_PATTERN, (_, id) => {
-        const label = speakerMap.get(id.trim()) ?? '?';
-        return `${label}: `;
-    });
+  return text.replace(SPEAKER_TAG_PATTERN, (_, id) => {
+    const label = speakerMap.get(id.trim()) ?? "?";
+    return `${label}: `;
+  });
 }
 
 /**
@@ -64,13 +65,23 @@ function normalizeSpeakerTags(text, speakerMap) {
  * A: texto → texto
  */
 function stripNormalizedSpeakers(text) {
-    return text.replace(/^[A-Z]:\s+(?=\S)/gm, '').trim();
+  return text.replace(/^[A-Z]:\s+(?=\S)/gm, "").trim();
+}
+
+/**
+ * Elimina el prefijo de hablante SOLO si está al inicio del string (no multilínea).
+ * Se usa al concatenar miembros 2..N de una unidad de sentido para no duplicar
+ * etiquetas de hablante a mitad de la oración concatenada.
+ */
+function stripLeadingSpeakerTag(text) {
+  return text.replace(/^[A-Z]:\s+/, "");
 }
 
 module.exports = {
-    protectTags,
-    restoreTags,
-    buildSpeakerMap,
-    normalizeSpeakerTags,
-    stripNormalizedSpeakers
+  protectTags,
+  restoreTags,
+  buildSpeakerMap,
+  normalizeSpeakerTags,
+  stripNormalizedSpeakers,
+  stripLeadingSpeakerTag,
 };

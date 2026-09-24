@@ -1,17 +1,20 @@
 // resegment.js
-'use strict';
+"use strict";
 
-const fs = require('fs');
+const fs = require("fs");
 
 // Estándares profesionales (compatibles con Netflix / BBC guidelines)
 const STANDARDS = {
-    maxCPS: 17,            // caracteres por segundo (Netflix: 17)
-    minDurationSec: 0.5,   // duración mínima por subtítulo
-    maxDurationSec: 7.0,   // duración máxima por subtítulo
-    maxLineChars: 42,      // máx chars por línea
-    maxLines: 2,           // máx líneas por subtítulo
-    minPauseSec: 0.4,      // pausa entre palabras que fuerza corte
+  maxCPS: 17, // caracteres por segundo (Netflix: 17)
+  minDurationSec: 1.0, // duración mínima por subtítulo
+  maxDurationSec: 9.0, // duración máxima por subtítulo
+  maxLineChars: 42, // máx chars por línea
+  maxLines: 2, // máx líneas por subtítulo
+  minPauseSec: 0.6, // pausa entre palabras que fuerza corte
 };
+
+const TARGET_CPS = 15; // ritmo de lectura cómodo (techo real: STANDARDS.maxCPS)
+const GAP_CLOSE_MAX = 0.8; // huecos ≤ esto se consideran "parpadeo", no pausa real
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Parsing del JSON de WhisperX
@@ -27,62 +30,65 @@ const STANDARDS = {
  * @typedef {{ word: string, start: number, end: number, speaker: string|null }} WordEntry
  */
 function loadWhisperXJson(jsonPath) {
-    if (!fs.existsSync(jsonPath)) {
-        throw new Error(`JSON de WhisperX no encontrado: ${jsonPath}`);
-    }
+  if (!fs.existsSync(jsonPath)) {
+    throw new Error(`JSON de WhisperX no encontrado: ${jsonPath}`);
+  }
 
-    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-    let words = [];
-    let hasWordTimestamps = false;
+  const raw = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+  let words = [];
+  let hasWordTimestamps = false;
 
-    // Formato CLI: word_segments en raíz (con speaker si hay diarización)
-    if (Array.isArray(raw.word_segments) && raw.word_segments.length > 0) {
-        words = raw.word_segments
-            .filter(w => typeof w.start === 'number' && typeof w.end === 'number')
-            .map(w => ({
-                word: (w.word ?? '').trim(),
-                start: w.start,
-                end: w.end,
-                speaker: w.speaker ?? null,
-            }));
-        hasWordTimestamps = words.length > 0;
-    }
+  // Formato CLI: word_segments en raíz (con speaker si hay diarización)
+  if (Array.isArray(raw.word_segments) && raw.word_segments.length > 0) {
+    words = raw.word_segments
+      .filter((w) => typeof w.start === "number" && typeof w.end === "number")
+      .map((w) => ({
+        word: (w.word ?? "").trim(),
+        start: w.start,
+        end: w.end,
+        speaker: w.speaker ?? null,
+      }));
+    hasWordTimestamps = words.length > 0;
+  }
 
-    // Fallback: extraer words de dentro de cada segment
-    if (words.length === 0 && Array.isArray(raw.segments)) {
-        for (const seg of raw.segments) {
-            const segSpeaker = seg.speaker ?? null;
+  // Fallback: extraer words de dentro de cada segment
+  if (words.length === 0 && Array.isArray(raw.segments)) {
+    for (const seg of raw.segments) {
+      const segSpeaker = seg.speaker ?? null;
 
-            if (Array.isArray(seg.words) && seg.words.length > 0) {
-                for (const w of seg.words) {
-                    // Algunos tokens (números, etc.) pueden no tener timestamps [issue #1115]
-                    if (typeof w.start !== 'number' || typeof w.end !== 'number') continue;
-                    words.push({
-                        word: (w.word ?? '').trim(),
-                        start: w.start,
-                        end: w.end,
-                        speaker: w.speaker ?? segSpeaker,
-                    });
-                }
-                hasWordTimestamps = true;
-            } else {
-                // Sin word timestamps: usar el segmento como unidad atómica
-                words.push({
-                    word: (seg.text ?? '').trim(),
-                    start: seg.start,
-                    end: seg.end,
-                    speaker: segSpeaker,
-                    isSegment: true,
-                });
-            }
+      if (Array.isArray(seg.words) && seg.words.length > 0) {
+        for (const w of seg.words) {
+          // Algunos tokens (números, etc.) pueden no tener timestamps [issue #1115]
+          if (typeof w.start !== "number" || typeof w.end !== "number")
+            continue;
+          words.push({
+            word: (w.word ?? "").trim(),
+            start: w.start,
+            end: w.end,
+            speaker: w.speaker ?? segSpeaker,
+          });
         }
+        hasWordTimestamps = true;
+      } else {
+        // Sin word timestamps: usar el segmento como unidad atómica
+        words.push({
+          word: (seg.text ?? "").trim(),
+          start: seg.start,
+          end: seg.end,
+          speaker: segSpeaker,
+          isSegment: true,
+        });
+      }
     }
+  }
 
-    if (words.length === 0) {
-        throw new Error('El JSON de WhisperX no contiene palabras ni segmentos válidos.');
-    }
+  if (words.length === 0) {
+    throw new Error(
+      "El JSON de WhisperX no contiene palabras ni segmentos válidos.",
+    );
+  }
 
-    return { words, hasWordTimestamps };
+  return { words, hasWordTimestamps };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,32 +99,33 @@ function loadWhisperXJson(jsonPath) {
  * Decide si debe abrirse un nuevo bloque ANTES de la palabra en posición `idx`.
  */
 function shouldSplitBefore(words, idx, currentText, blockStart) {
-    if (idx === 0 || currentText.length === 0) return false;
+  if (idx === 0 || currentText.length === 0) return false;
 
-    const prev = words[idx - 1];
-    const curr = words[idx];
+  const prev = words[idx - 1];
+  const curr = words[idx];
 
-    // Cambio de hablante → corte siempre
-    if (prev.speaker && curr.speaker && prev.speaker !== curr.speaker) return true;
+  // Cambio de hablante → corte siempre
+  if (prev.speaker && curr.speaker && prev.speaker !== curr.speaker)
+    return true;
 
-    // Pausa larga entre palabras
-    const pause = curr.start - prev.end;
-    if (pause >= STANDARDS.minPauseSec) return true;
+  // Pausa larga entre palabras
+  const pause = curr.start - prev.end;
+  if (pause >= STANDARDS.minPauseSec) return true;
 
-    // Texto acumulado excedería el máximo (2 líneas × 42 chars)
-    const projected = (currentText + ' ' + curr.word).trim();
-    if (projected.length > STANDARDS.maxLineChars * STANDARDS.maxLines) return true;
+  // Texto acumulado excedería el máximo (2 líneas × 42 chars)
+  const projected = (currentText + " " + curr.word).trim();
+  if (projected.length > STANDARDS.maxLineChars * STANDARDS.maxLines)
+    return true;
 
-    // Duración excedería el máximo
-    if (curr.end - blockStart > STANDARDS.maxDurationSec) return true;
+  // Duración excedería el máximo
+  if (curr.end - blockStart > STANDARDS.maxDurationSec) return true;
 
-    // Fin de frase con contenido suficiente → corte natural
-    const prevWord = prev.word.trim();
-    if (/[.!?]$/.test(prevWord) && currentText.length > 20) return true;
-    if (/[,;]$/.test(prevWord) && currentText.length > 30) return true;
+  // Fin de frase con contenido suficiente → corte natural
+  const prevWord = prev.word.trim();
+  if (/[.!?]$/.test(prevWord) && currentText.length > 20) return true;
+  if (/[,;]$/.test(prevWord) && currentText.length > 30) return true;
 
-
-    return false;
+  return false;
 }
 
 /**
@@ -126,67 +133,90 @@ function shouldSplitBefore(words, idx, currentText, blockStart) {
  * al punto medio.
  */
 function formatSubtitleText(text) {
-    const clean = text.trim().replace(/\s+/g, ' ');
-    if (clean.length <= STANDARDS.maxLineChars) return clean;
+  const clean = text.trim().replace(/\s+/g, " ");
+  if (clean.length <= STANDARDS.maxLineChars) return clean;
 
-    const mid = Math.floor(clean.length / 2);
-    let left = mid;
-    let right = mid;
+  const mid = Math.floor(clean.length / 2);
+  let left = mid;
+  let right = mid;
 
-    while (left > 0 || right < clean.length) {
-        if (left > 0 && clean[left] === ' ') {
-            return `${clean.slice(0, left).trim()}\n${clean.slice(left).trim()}`;
-        }
-        if (right < clean.length && clean[right] === ' ') {
-            return `${clean.slice(0, right).trim()}\n${clean.slice(right).trim()}`;
-        }
-        left--;
-        right++;
+  while (left > 0 || right < clean.length) {
+    if (left > 0 && clean[left] === " ") {
+      return `${clean.slice(0, left).trim()}\n${clean.slice(left).trim()}`;
     }
+    if (right < clean.length && clean[right] === " ") {
+      return `${clean.slice(0, right).trim()}\n${clean.slice(right).trim()}`;
+    }
+    left--;
+    right++;
+  }
 
-    // Forzar corte duro si no hay espacio (raro)
-    return `${clean.slice(0, STANDARDS.maxLineChars)}\n${clean.slice(STANDARDS.maxLineChars)}`;
+  // Forzar corte duro si no hay espacio (raro)
+  return `${clean.slice(0, STANDARDS.maxLineChars)}\n${clean.slice(STANDARDS.maxLineChars)}`;
+}
+
+/**
+ * ¿El texto termina en una frontera segura de oración (.!?, con o sin comillas/paréntesis de cierre)?
+ */
+function endsAtSentence(text) {
+  return /[.!?]["')\]]*$/.test(text.trim());
 }
 
 /**
  * Construye bloques de subtítulo a partir de palabras con timestamps.
  */
 function buildBlocksFromWords(words) {
-    const blocks = [];
-    let buffer = [];
-    let blockStart = null;
+  const blocks = [];
+  let buffer = [];
+  let blockStart = null;
 
-    for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        const currentText = buffer.map(w => w.word).join(' ').trim();
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const currentText = buffer
+      .map((w) => w.word)
+      .join(" ")
+      .trim();
 
-        if (buffer.length > 0 && shouldSplitBefore(words, i, currentText, blockStart)) {
-            blocks.push({
-                start: blockStart,
-                end: words[i - 1].end,
-                text: formatSubtitleText(currentText),
-                speaker: buffer[0].speaker ?? null,
-            });
-            buffer = [];
-            blockStart = null;
-        }
-
-        if (buffer.length === 0) blockStart = word.start;
-        buffer.push(word);
+    if (
+      buffer.length > 0 &&
+      shouldSplitBefore(words, i, currentText, blockStart)
+    ) {
+      const speakerChanged = !!(
+        buffer.at(-1).speaker &&
+        word.speaker &&
+        buffer.at(-1).speaker !== word.speaker
+      );
+      blocks.push({
+        start: blockStart,
+        end: words[i - 1].end,
+        text: formatSubtitleText(currentText),
+        speaker: buffer[0].speaker ?? null,
+        sentenceBoundary: speakerChanged || endsAtSentence(currentText),
+      });
+      buffer = [];
+      blockStart = null;
     }
 
-    // Emitir último bloque
-    if (buffer.length > 0) {
-        const text = buffer.map(w => w.word).join(' ').trim();
-        blocks.push({
-            start: blockStart,
-            end: buffer.at(-1).end,
-            text: formatSubtitleText(text),
-            speaker: buffer[0].speaker ?? null,
-        });
-    }
+    if (buffer.length === 0) blockStart = word.start;
+    buffer.push(word);
+  }
 
-    return blocks;
+  // Emitir último bloque
+  if (buffer.length > 0) {
+    const text = buffer
+      .map((w) => w.word)
+      .join(" ")
+      .trim();
+    blocks.push({
+      start: blockStart,
+      end: buffer.at(-1).end,
+      text: formatSubtitleText(text),
+      speaker: buffer[0].speaker ?? null,
+      sentenceBoundary: endsAtSentence(text),
+    });
+  }
+
+  return blocks;
 }
 
 /**
@@ -194,33 +224,34 @@ function buildBlocksFromWords(words) {
  * con el bloque adyacente más corto.
  */
 function mergeShortBlocks(blocks) {
-    if (blocks.length <= 1) return blocks;
+  if (blocks.length <= 1) return blocks;
 
-    const working = blocks.map(b => ({ ...b })); // copia defensiva
-    const result = [];
+  const working = blocks.map((b) => ({ ...b })); // copia defensiva
+  const result = [];
 
-    for (let i = 0; i < working.length; i++) {
-        const block = working[i];
-        const duration = block.end - block.start;
+  for (let i = 0; i < working.length; i++) {
+    const block = working[i];
+    const duration = block.end - block.start;
 
-        if (duration < STANDARDS.minDurationSec && result.length > 0) {
-            // Fusionar con el bloque anterior
-            const prev = result[result.length - 1];
-            prev.end = block.end;
-            prev.text = formatSubtitleText(`${prev.text} ${block.text}`.trim());
-        } else if (duration < STANDARDS.minDurationSec && i + 1 < working.length) {
-            // Fusionar con el siguiente (primer bloque es demasiado corto)
-            working[i + 1] = {
-                ...working[i + 1],
-                start: block.start,
-                text: formatSubtitleText(`${block.text} ${working[i + 1].text}`.trim()),
-            };
-        } else {
-            result.push({ ...block });
-        }
+    if (duration < STANDARDS.minDurationSec && result.length > 0) {
+      // Fusionar con el bloque anterior
+      const prev = result[result.length - 1];
+      prev.end = block.end;
+      prev.text = formatSubtitleText(`${prev.text} ${block.text}`.trim());
+      prev.sentenceBoundary = block.sentenceBoundary;
+    } else if (duration < STANDARDS.minDurationSec && i + 1 < working.length) {
+      // Fusionar con el siguiente (primer bloque es demasiado corto)
+      working[i + 1] = {
+        ...working[i + 1],
+        start: block.start,
+        text: formatSubtitleText(`${block.text} ${working[i + 1].text}`.trim()),
+      };
+    } else {
+      result.push({ ...block });
     }
+  }
 
-    return result;
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,15 +264,19 @@ function mergeShortBlocks(blocks) {
  * @returns {string}
  */
 function formatTimestamp(seconds) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    const ms = Math.round((seconds % 1) * 1000);
-    return [
-        String(h).padStart(2, '0'),
-        String(m).padStart(2, '0'),
-        String(s).padStart(2, '0'),
-    ].join(':') + ',' + String(ms).padStart(3, '0');
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.round((seconds % 1) * 1000);
+  return (
+    [
+      String(h).padStart(2, "0"),
+      String(m).padStart(2, "0"),
+      String(s).padStart(2, "0"),
+    ].join(":") +
+    "," +
+    String(ms).padStart(3, "0")
+  );
 }
 
 /**
@@ -250,10 +285,10 @@ function formatTimestamp(seconds) {
  * @returns {number}
  */
 function parseTimestamp(ts) {
-    const [hm, rest] = ts.trim().split(/,/);
-    const parts = hm.split(':').map(Number);
-    const ms = parseInt(rest, 10) / 1000;
-    return parts[0] * 3600 + parts[1] * 60 + parts[2] + ms;
+  const [hm, rest] = ts.trim().split(/,/);
+  const parts = hm.split(":").map(Number);
+  const ms = parseInt(rest, 10) / 1000;
+  return parts[0] * 3600 + parts[1] * 60 + parts[2] + ms;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -264,24 +299,87 @@ function parseTimestamp(ts) {
  * Calcula métricas de calidad sobre el array de subtítulos resegmentados.
  */
 function computeStats(subtitles) {
-    const durations = subtitles.map(s => {
-        const [startTs, endTs] = s.timestamp.split(' --> ');
-        return parseTimestamp(endTs) - parseTimestamp(startTs);
-    });
+  const durations = subtitles.map((s) => {
+    const [startTs, endTs] = s.timestamp.split(" --> ");
+    return parseTimestamp(endTs) - parseTimestamp(startTs);
+  });
 
-    const cpsList = subtitles.map((s, i) => {
-        const charCount = s.text.replace(/\n/g, '').length;
-        return charCount / Math.max(durations[i], 0.1);
-    });
+  const cpsList = subtitles.map((s, i) => {
+    const charCount = s.text.replace(/\n/g, "").length;
+    return charCount / Math.max(durations[i], 0.1);
+  });
 
-    return {
-        totalSubtitles: subtitles.length,
-        avgDurationSec: (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(2),
-        maxDurationSec: Math.max(...durations).toFixed(2),
-        avgCPS: (cpsList.reduce((a, b) => a + b, 0) / cpsList.length).toFixed(1),
-        maxCPS: Math.max(...cpsList).toFixed(1),
-        aboveMaxCPS: cpsList.filter(c => c > STANDARDS.maxCPS).length,
-    };
+  return {
+    totalSubtitles: subtitles.length,
+    avgDurationSec: (
+      durations.reduce((a, b) => a + b, 0) / durations.length
+    ).toFixed(2),
+    maxDurationSec: Math.max(...durations).toFixed(2),
+    avgCPS: (cpsList.reduce((a, b) => a + b, 0) / cpsList.length).toFixed(1),
+    maxCPS: Math.max(...cpsList).toFixed(1),
+    aboveMaxCPS: cpsList.filter((c) => c > STANDARDS.maxCPS).length,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suavizado de tiempos: duración proporcional al texto + cierre de huecos
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Ajusta start/end de los subtítulos finales para:
+ *  1) darles duración proporcional a su longitud de texto (sin invadir al vecino), y
+ *  2) cerrar huecos residuales pequeños (parpadeo) repartiéndolos entre ambos.
+ * Nunca fusiona texto ni invade el silencio "real" (huecos grandes se respetan).
+ */
+function smoothTimings(subtitles) {
+  if (subtitles.length === 0) return subtitles;
+
+  const items = subtitles.map((s) => {
+    const [startTs, endTs] = s.timestamp.split(" --> ");
+    return { ...s, start: parseTimestamp(startTs), end: parseTimestamp(endTs) };
+  });
+
+  // 1) Extender duración según longitud de texto, usando el hueco disponible a cada lado
+  for (let i = 0; i < items.length; i++) {
+    const plainText = items[i].text
+      .replace(/\n/g, "")
+      .replace(/^\[[^\]]+\]:\s*/, "");
+    const idealDur = Math.max(
+      STANDARDS.minDurationSec,
+      plainText.length / TARGET_CPS,
+    );
+    let deficit = idealDur - (items[i].end - items[i].start);
+    if (deficit <= 0) continue;
+
+    if (i < items.length - 1) {
+      const gapAfter = items[i + 1].start - items[i].end;
+      const extend = Math.min(deficit, Math.max(0, gapAfter));
+      items[i].end += extend;
+      deficit -= extend;
+    }
+    if (deficit > 0 && i > 0) {
+      const gapBefore = items[i].start - items[i - 1].end;
+      const extend = Math.min(deficit, Math.max(0, gapBefore));
+      items[i].start -= extend;
+    }
+  }
+
+  // 2) Cerrar huecos residuales pequeños (parpadeo), repartidos al 50%
+  for (let i = 0; i < items.length - 1; i++) {
+    const gap = items[i + 1].start - items[i].end;
+    if (gap > 0 && gap <= GAP_CLOSE_MAX) {
+      const mid = items[i].end + gap / 2;
+      items[i].end = mid;
+      items[i + 1].start = mid;
+    }
+  }
+
+  return items.map(({ index, start, end, text, sentenceBoundary }) => ({
+    index,
+    timestamp: `${formatTimestamp(start)} --> ${formatTimestamp(end)}`,
+    text,
+    sentenceBoundary,
+  }));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -297,58 +395,64 @@ function computeStats(subtitles) {
  * @param {number}      margin       - Tolerancia en segundos al buscar palabras
  * @returns {object[]}               - Uno o más bloques con timestamps refinados
  */
-function resegmentBlock(originalSub, allWords, margin = 0.4, usedWordIndices = new Set()) {
-    const [startTs, endTs] = originalSub.timestamp.split(' --> ');
-    const origStart = parseTimestamp(startTs);
-    const origEnd   = parseTimestamp(endTs);
+function resegmentBlock(
+  originalSub,
+  allWords,
+  margin = 0.4,
+  usedWordIndices = new Set(),
+) {
+  const [startTs, endTs] = originalSub.timestamp.split(" --> ");
+  const origStart = parseTimestamp(startTs);
+  const origEnd = parseTimestamp(endTs);
 
-    const winStart = Math.max(0, origStart - margin);
-    const winEnd   = origEnd + margin;
+  const winStart = Math.max(0, origStart - margin);
+  const winEnd = origEnd + margin;
 
-    const words = allWords
-        .map((w, i) => ({ ...w, _idx: i }))
-        .filter(w =>
-            !usedWordIndices.has(w._idx) &&
-            typeof w.start === 'number' &&
-            typeof w.end   === 'number' &&
-            w.start >= winStart &&
-            w.end   <= winEnd
-        );
+  const words = allWords
+    .map((w, i) => ({ ...w, _idx: i }))
+    .filter(
+      (w) =>
+        !usedWordIndices.has(w._idx) &&
+        typeof w.start === "number" &&
+        typeof w.end === "number" &&
+        w.start >= winStart &&
+        w.end <= winEnd,
+    );
 
-    // Sin palabras en la ventana → conservar bloque original sin cambios
-    if (words.length === 0) return [{ ...originalSub }];
+  // Sin palabras en la ventana → conservar bloque original sin cambios
+  if (words.length === 0) return [{ ...originalSub, sentenceBoundary: true }];
 
-    // Detección de deriva: si el centro de las palabras se aleja >1 s del centro del bloque
-    const wordsCenter = (words[0].start + words.at(-1).end) / 2;
-    const origCenter  = (origStart + origEnd) / 2;
-    if (Math.abs(wordsCenter - origCenter) > 1.0) {
-        return [{ ...originalSub }];
-    }
+  // Detección de deriva: si el centro de las palabras se aleja >1 s del centro del bloque
+  const wordsCenter = (words[0].start + words.at(-1).end) / 2;
+  const origCenter = (origStart + origEnd) / 2;
+  if (Math.abs(wordsCenter - origCenter) > 1.0) {
+    return [{ ...originalSub, sentenceBoundary: true }];
+  }
 
-    const rawBlocks = mergeShortBlocks(buildBlocksFromWords(words));
-    if (rawBlocks.length <= 1 && words.length < 3) return [{ ...originalSub }];
+  const rawBlocks = mergeShortBlocks(buildBlocksFromWords(words));
+  if (rawBlocks.length <= 1 && words.length < 3)
+    return [{ ...originalSub, sentenceBoundary: true }];
 
-    // Marcar palabras como consumidas solo si el bloque aporta valor real
-    words.forEach(w => usedWordIndices.add(w._idx));
+  // Marcar palabras como consumidas solo si el bloque aporta valor real
+  words.forEach((w) => usedWordIndices.add(w._idx));
 
-    return rawBlocks.map((block, i) => {
-        // Clamp: el primer sub-bloque no puede empezar antes del bloque original,
-        // el último no puede acabar después
-        const clampedStart = i === 0
-            ? Math.max(block.start, origStart)
-            : block.start;
-        const clampedEnd = i === rawBlocks.length - 1
-            ? Math.min(block.end, origEnd)
-            : block.end;
+  return rawBlocks.map((block, i) => {
+    // Clamp: el primer sub-bloque no puede empezar antes del bloque original,
+    // el último no puede acabar después
+    const clampedStart =
+      i === 0 ? Math.max(block.start, origStart) : block.start;
+    const clampedEnd =
+      i === rawBlocks.length - 1 ? Math.min(block.end, origEnd) : block.end;
 
-        if (clampedStart >= clampedEnd) return null;
+    if (clampedStart >= clampedEnd) return null;
 
-        return {
-            index: originalSub.index, // se reasigna en el paso final
-            timestamp: `${formatTimestamp(clampedStart)} --> ${formatTimestamp(clampedEnd)}`,
-            text: block.speaker ? `[${block.speaker}]: ${block.text}` : block.text,
-        };
-    });
+    return {
+      index: originalSub.index, // se reasigna en el paso final
+      timestamp: `${formatTimestamp(clampedStart)} --> ${formatTimestamp(clampedEnd)}`,
+      text: block.speaker ? `[${block.speaker}]: ${block.text}` : block.text,
+      sentenceBoundary: block.sentenceBoundary,
+    };
+  });
 }
 
 /**
@@ -360,33 +464,44 @@ function resegmentBlock(originalSub, allWords, margin = 0.4, usedWordIndices = n
  * @returns {{ subtitles: object[], stats: object, hasWordTimestamps: boolean }}
  */
 function resegmentFromJson(jsonPath, originalSubs) {
-    const { words, hasWordTimestamps } = loadWhisperXJson(jsonPath);
+  const { words, hasWordTimestamps } = loadWhisperXJson(jsonPath);
 
-    if (words.length === 0) {
-        throw new Error('El JSON de WhisperX no contiene palabras ni segmentos válidos.');
-    }
+  if (words.length === 0) {
+    throw new Error(
+      "El JSON de WhisperX no contiene palabras ni segmentos válidos.",
+    );
+  }
 
-    // Resegmentar bloque a bloque, respetando los anclajes temporales del SRT original
-    const allBlocks = [];
-    const usedWordIndices = new Set();
-    for (const sub of originalSubs) {
-        const blocks = resegmentBlock(sub, words, 0.4, usedWordIndices);
-        allBlocks.push(...blocks);
-    }
+  // Resegmentar bloque a bloque, respetando los anclajes temporales del SRT original
+  const allBlocks = [];
+  const usedWordIndices = new Set();
+  for (const sub of originalSubs) {
+    const blocks = resegmentBlock(sub, words, 0.4, usedWordIndices);
+    allBlocks.push(...blocks);
+  }
 
-    // Reasignar índices secuenciales
-    const subtitles = allBlocks.map((block, i) => ({ ...block, index: i + 1 }));
+  // Reasignar índices secuenciales
+  const indexed = allBlocks.map((block, i) => ({ ...block, index: i + 1 }));
 
-    return {
-        subtitles,
-        stats: computeStats(subtitles),
-        hasWordTimestamps,
-    };
+  // Duración proporcional al texto + cierre de huecos pequeños (parpadeo)
+  const subtitles = smoothTimings(indexed);
+
+  // El último subtítulo del archivo siempre cierra unidad, aunque no termine en .!?
+  if (subtitles.length > 0) {
+    subtitles[subtitles.length - 1].sentenceBoundary = true;
+  }
+
+  return {
+    subtitles,
+    stats: computeStats(subtitles),
+    hasWordTimestamps,
+  };
 }
 
 module.exports = {
-    resegmentFromJson,
-    formatTimestamp,
-    parseTimestamp,
-    STANDARDS,
+  resegmentFromJson,
+  formatSubtitleText,
+  formatTimestamp,
+  parseTimestamp,
+  STANDARDS,
 };
