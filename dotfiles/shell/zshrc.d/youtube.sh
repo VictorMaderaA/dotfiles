@@ -97,7 +97,7 @@ _ytdl() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   # ── Intento 1: web+mweb con cookies (calidad máxima) ─────────────────────
-  echo "⏳  Intento 1/3: cliente web con cookies..."
+  echo "⏳  Intento 1/4: cliente web con cookies..."
   yt-dlp -f "${format_str}" \
     --extractor-args "youtube:player_client=web,mweb" \
     "${common_args[@]}" "${url}"
@@ -106,7 +106,7 @@ _ytdl() {
   # ── Intento 2: android_vr (no requiere PO Token) ──────────────────────────
   if [[ ${code} -ne 0 ]]; then
     echo ""
-    echo "⚠️  Falló. Intento 2/3: cliente android_vr (sin PO Token requerido)..."
+    echo "⚠️  Falló. Intento 2/4: cliente android_vr (sin PO Token requerido)..."
     yt-dlp -f "${format_str}" \
       --extractor-args "youtube:player_client=android_vr,web" \
       "${common_args[@]}" "${url}"
@@ -121,6 +121,19 @@ _ytdl() {
     _ytdl_update
     yt-dlp -f "${format_str}" \
       --extractor-args "youtube:player_client=tv,android_vr" \
+      "${common_args[@]}" "${url}"
+    code=$?
+  fi
+
+  # ── Intento 4: sin forzar cliente — yt-dlp elige el que funcione ─────────
+  # Forzar web/mweb/android_vr/tv suele romperse por exigencias de PO Token
+  # o playability UNPLAYABLE ("The page needs to be reloaded"). Dejar que
+  # yt-dlp decida (p.ej. visionos u otro cliente sin PO Token) resuelve
+  # muchos de esos casos sin configuración extra.
+  if [[ ${code} -ne 0 ]]; then
+    echo ""
+    echo "⚠️  Sigue fallando. Intento 4/4: sin forzar cliente (auto)..."
+    yt-dlp -f "${format_str}" \
       "${common_args[@]}" "${url}"
     code=$?
   fi
