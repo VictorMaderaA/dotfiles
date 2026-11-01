@@ -95,6 +95,7 @@ Todos los instaladores sourcea estas librerías para detección, logging y gesti
 ### Herramientas en `bin/`
 
 - **`translate-srt`** / **`translate-srt-core/`** — traduce subtítulos SRT usando OpenAI API (Node.js). Requiere `OPENAI_API_KEY` en `.env.local`.
+- **`translate-srt-simple`** / **`translate-srt-simple-core/`** — versión ligera: acepta un `.srt` o un vídeo (`.mkv`, `.mp4`...) con subtítulos embebidos, los extrae con ffprobe/ffmpeg (`extract-subs.js`) y los traduce a `.es.srt` por lotes. Antes de traducir, `clean-subs.js` limpia SRT convertidos desde ASS: fusiona frames de efectos/karaoke, quita tags de estilo y conserva `{\anN}` y cursiva (desactivable con `--no-clean`). Si un lote falla se parte por la mitad hasta aislar las líneas problemáticas. Procesa un fichero por ejecución; para una carpeta usa un bucle: `for f in *.mkv; do translate-srt-simple "$f" "${f%.mkv}.es.srt"; done`.
 - **`web/password-gen.html`** — generador de contraseñas standalone (HTML puro).
 - **`web/md-aggregator.html`** — agrega archivos markdown para contexto de LLMs (HTML puro).
 

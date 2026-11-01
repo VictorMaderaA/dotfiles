@@ -15,6 +15,7 @@ REGLAS:
 5. No inventes contenido que no esté en el original.
 6. Usa contracciones naturales: "del", "al".
 7. Evita calcos del inglés.
+8. Si un subtítulo es letra de canción en japonés romanizado (romaji), devuélvelo tal cual, sin traducir. Nunca devuelvas una cadena vacía.
 
 FORMATO DE RESPUESTA — solo JSON válido, sin markdown:
 { "translations": { "<índice>": "texto traducido", ... } }`;
@@ -46,6 +47,20 @@ async function translateBatch(batch, retries = CONFIG.maxRetries) {
     return null;
 }
 
+// Si un lote falla tras los reintentos, lo parte por la mitad hasta aislar
+// los subtítulos problemáticos en vez de perder el lote entero.
+async function translateWithSplit(batch) {
+    const translations = await translateBatch(batch, batch.length > 1 ? CONFIG.maxRetries : 2);
+    if (translations) return translations;
+    if (batch.length === 1) return null;
+    const mid = Math.ceil(batch.length / 2);
+    const merged = {};
+    for (const half of [batch.slice(0, mid), batch.slice(mid)]) {
+        Object.assign(merged, (await translateWithSplit(half)) ?? {});
+    }
+    return merged;
+}
+
 async function translateSubtitles(subtitles) {
     const results = new Map();
     const batches = [];
@@ -61,11 +76,11 @@ async function translateSubtitles(subtitles) {
         const range = `${batch[0].index}–${batch.at(-1).index}`;
         process.stdout.write(`🔄 Lote ${i + 1}/${batches.length} (subs ${range})... `);
 
-        const translations = await translateBatch(batch);
+        const translations = await translateWithSplit(batch);
 
         if (translations) {
             for (const sub of batch) {
-                results.set(sub.index, translations[String(sub.index)] ?? sub.text);
+                results.set(sub.index, translations[String(sub.index)] || sub.text);
             }
             console.log('✅');
         } else {
