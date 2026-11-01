@@ -6,6 +6,7 @@
 
 const MAX_EFFECT_MS = 100; // bloques más cortos que esto son frames de efecto
 const MERGE_GAP_MS = 100; // huecos menores se consideran el mismo rótulo
+const DRAWING_RE = /^[mlbspcn][\s\d.\-mlbspcn]{20,}$/;
 
 const TS_RE = /(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)/;
 
@@ -54,6 +55,13 @@ function cleanSubtitles(subs) {
       continue;
     }
     const style = stripStyle(s.text);
+    // ffmpeg descarta el marcador \p1 al convertir: se detectan los trazos
+    // vectoriales por su contenido ("m 378.77 791.46 b ...", hasta 60 KB).
+    // Letras sueltas ("E") son frames de animación de rótulos.
+    if (DRAWING_RE.test(style.text) || /^\p{L}$/u.test(style.text)) {
+      stats.drawings++;
+      continue;
+    }
     if (!/[\p{L}\p{N}]/u.test(style.text)) {
       stats.empty++;
       continue;
