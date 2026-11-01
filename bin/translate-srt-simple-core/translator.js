@@ -40,6 +40,8 @@ async function translateBatch(batch, retries = CONFIG.maxRetries) {
 
             console.warn(` ⚠️ Intento ${attempt}: faltan ${missing.length} índices, reintentando...`);
         } catch (err) {
+            // Créditos agotados / credenciales inválidas: abortar, no degradar a inglés.
+            if (err.fatal) throw err;
             console.warn(` ⚠️ Intento ${attempt}: ${err.message}`);
         }
         if (attempt < retries) await delay(1000 * attempt);
@@ -63,6 +65,7 @@ async function translateWithSplit(batch) {
 
 async function translateSubtitles(subtitles) {
     const results = new Map();
+    let failed = 0; // subtítulos que se quedaron sin traducir (fallback al original)
     const batches = [];
 
     for (let i = 0; i < subtitles.length; i += CONFIG.batchSize) {
@@ -80,16 +83,28 @@ async function translateSubtitles(subtitles) {
 
         if (translations) {
             for (const sub of batch) {
-                results.set(sub.index, translations[String(sub.index)] || sub.text);
+                const translated = translations[String(sub.index)];
+                if (!translated) failed++;
+                results.set(sub.index, translated || sub.text);
             }
             console.log('✅');
         } else {
             console.log('❌ fallback al original');
+            failed += batch.length;
             for (const sub of batch) results.set(sub.index, sub.text);
         }
 
         if (i < batches.length - 1) await delay(CONFIG.delayMs);
     }
+
+    const ratio = failed / Math.max(subtitles.length, 1);
+    if (ratio > CONFIG.maxFailedRatio) {
+        throw new Error(
+            `${failed}/${subtitles.length} subtítulos (${(ratio * 100).toFixed(1)}%) sin traducir; ` +
+            `supera el umbral del ${CONFIG.maxFailedRatio * 100}%. No se escribe el archivo de salida.`
+        );
+    }
+    if (failed > 0) console.warn(`\n ⚠️ ${failed} subtítulo(s) conservan el texto original.`);
 
     return subtitles.map(s => ({
         index: s.index,

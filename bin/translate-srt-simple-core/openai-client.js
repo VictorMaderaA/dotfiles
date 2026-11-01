@@ -4,6 +4,11 @@ const https = require("https");
 const { CONFIG } = require("./config");
 
 const REQUEST_TIMEOUT_MS = 90000;
+const FATAL_ERROR_CODES = new Set([
+  "insufficient_quota",
+  "billing_not_active",
+  "invalid_api_key",
+]);
 
 function callOpenAI(messages, opts = {}) {
   return new Promise((resolve, reject) => {
@@ -39,8 +44,16 @@ function callOpenAI(messages, opts = {}) {
         res.on("end", () => {
           try {
             const parsed = JSON.parse(data);
-            if (parsed.error)
-              return reject(new Error(`OpenAI: ${parsed.error.message}`));
+            if (parsed.error) {
+              const err = new Error(`OpenAI: ${parsed.error.message}`);
+              // Créditos agotados o credenciales inválidas: reintentar no sirve.
+              err.fatal =
+                FATAL_ERROR_CODES.has(parsed.error.code) ||
+                FATAL_ERROR_CODES.has(parsed.error.type) ||
+                res.statusCode === 401 ||
+                /no credits|insufficient/i.test(parsed.error.message ?? "");
+              return reject(err);
+            }
             resolve(parsed.choices[0].message.content);
           } catch {
             reject(new Error(`Respuesta inválida: ${data.slice(0, 300)}`));
