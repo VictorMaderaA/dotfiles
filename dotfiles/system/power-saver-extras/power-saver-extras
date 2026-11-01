@@ -1,0 +1,99 @@
+#!/bin/bash
+# power-saver-extras - Ajustes extra de ahorro de energía ligados al perfil
+# "power-saver" de power-profiles-daemon.
+#
+# Uso: power-saver-extras {watch|apply|revert}
+#   watch   Escucha cambios de perfil por D-Bus y aplica/revierte (modo servicio)
+#   apply   Aplica los ajustes (guardando antes los valores originales)
+#   revert  Restaura los valores originales guardados (no-op si no hay estado)
+#
+# Configuración: /etc/default/power-saver-extras
+
+CONF=/etc/default/power-saver-extras
+STATE_DIR=/run/power-saver-extras
+CPUFREQ=/sys/devices/system/cpu/cpufreq
+
+# Valores por defecto (sobrescribibles desde $CONF)
+MAX_FREQ_KHZ=2200000
+GPU_LIMIT_W=100
+
+# shellcheck disable=SC1090
+[[ -f "$CONF" ]] && source "$CONF"
+
+log() { echo "power-saver-extras: $*"; }
+
+apply() {
+    # Idempotente: los originales solo se guardan la primera vez
+    if [[ ! -d "$STATE_DIR" ]]; then
+        mkdir -p "$STATE_DIR"
+        for p in "$CPUFREQ"/policy*; do
+            echo "$p $(cat "$p/scaling_max_freq")" >> "$STATE_DIR/max_freq"
+        done
+        if command -v nvidia-smi >/dev/null; then
+            nvidia-smi --query-gpu=power.limit --format=csv,noheader,nounits \
+                | head -1 | cut -d. -f1 > "$STATE_DIR/gpu_limit"
+        fi
+    fi
+
+    # No tocar cpufreq/boost: power-profiles-daemon escribe policy*/boost al
+    # cambiar de perfil y falla (EINVAL) si el boost global está desactivado.
+    # Con MAX_FREQ_KHZ por debajo de la frecuencia base el boost no entra en juego.
+    if [[ -n "$MAX_FREQ_KHZ" ]]; then
+        for p in "$CPUFREQ"/policy*; do
+            echo "$MAX_FREQ_KHZ" > "$p/scaling_max_freq" 2>/dev/null
+        done
+    fi
+    if [[ -n "$GPU_LIMIT_W" ]] && command -v nvidia-smi >/dev/null; then
+        nvidia-smi -pl "$GPU_LIMIT_W" >/dev/null
+    fi
+    log "ajustes aplicados"
+}
+
+revert() {
+    [[ -d "$STATE_DIR" ]] || return 0
+
+    if [[ -f "$STATE_DIR/max_freq" ]]; then
+        # El máximo guardado puede estar recortado por el perfil previo (el
+        # driver baja cpuinfo_max_freq con boost off): nunca restaurar por
+        # debajo del máximo de hardware actual.
+        while read -r p freq; do
+            hw=$(cat "$p/cpuinfo_max_freq" 2>/dev/null)
+            [[ -n "$hw" && "$hw" -gt "$freq" ]] && freq=$hw
+            echo "$freq" > "$p/scaling_max_freq" 2>/dev/null
+        done < "$STATE_DIR/max_freq"
+    fi
+    if [[ -s "$STATE_DIR/gpu_limit" ]] && command -v nvidia-smi >/dev/null; then
+        nvidia-smi -pl "$(cat "$STATE_DIR/gpu_limit")" >/dev/null
+    fi
+    rm -rf "$STATE_DIR"
+    log "ajustes revertidos"
+}
+
+active_profile() {
+    busctl --system get-property net.hadess.PowerProfiles /net/hadess/PowerProfiles \
+        net.hadess.PowerProfiles ActiveProfile 2>/dev/null | cut -d'"' -f2
+}
+
+sync_profile() {
+    if [[ "$(active_profile)" == "power-saver" ]]; then apply; else revert; fi
+}
+
+watch() {
+    trap 'exit 0' TERM INT
+    while true; do
+        sync_profile
+        # El monitor termina si power-profiles-daemon se reinicia: reintentar
+        while read -r line; do
+            [[ "$line" == *ActiveProfile* ]] && sync_profile
+        done < <(gdbus monitor --system --dest net.hadess.PowerProfiles \
+                    --object-path /net/hadess/PowerProfiles 2>/dev/null)
+        sleep 5
+    done
+}
+
+case "$1" in
+    watch)  watch ;;
+    apply)  apply ;;
+    revert) revert ;;
+    *) echo "Uso: $0 {watch|apply|revert}" >&2; exit 1 ;;
+esac

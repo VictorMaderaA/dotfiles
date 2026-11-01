@@ -18,6 +18,8 @@ Dotfiles profesional y auto-adaptable para entornos Linux (Ubuntu/Fedora/Arch). 
 ./install.sh --no-backup      # No hacer backup de archivos existentes
 ./install.sh --no-tui         # Sin interfaz interactiva
 ./install.sh --env <entorno>  # Forzar entorno: wsl | desktop | server
+./install.sh --powersave      # Solo servicio power-saver-extras (ver docs/power-saver.md)
+./install.sh --uninstall-powersave
 ```
 
 ## Tests
@@ -54,6 +56,10 @@ install.sh
   → Init .env.local y dotfiles/ssh/config.local desde templates
   → Backup automático en .dotfiles_backup/
 ```
+
+### Módulo opcional POWERSAVE (solo desktop)
+
+Casilla en el TUI (OFF por defecto, no se activa con `--no-tui`). `scripts/installers/power.sh` **copia** (no symlink) a rutas de root los ficheros de `dotfiles/system/power-saver-extras/`. Detalle en `docs/power-saver.md`.
 
 ### Sistema de symlinks
 

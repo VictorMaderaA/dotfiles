@@ -22,6 +22,8 @@ cd ~/dotfiles
 | `--debug` | Muestra cada comando ejecutado |
 | `--no-backup` | No hacer backup de archivos existentes |
 | `--no-tui` | Sin interfaz interactiva |
+| `--powersave` | Instala solo el servicio `power-saver-extras` (desktop), sin menú |
+| `--uninstall-powersave` | Desinstala el servicio `power-saver-extras` |
 | `--env <entorno>` | Fuerza entorno: `wsl` \| `desktop` \| `server` |
 
 ---

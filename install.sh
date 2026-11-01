@@ -7,6 +7,8 @@
 #   --debug          Modo debug (muestra todos los comandos)
 #   --no-backup      No hacer backup de archivos existentes
 #   --env <env>      Especificar entorno (wsl|desktop|server)
+#   --powersave            Instalar solo el servicio power-saver-extras (desktop)
+#   --uninstall-powersave  Desinstalar el servicio power-saver-extras
 
 
 set -e
@@ -29,6 +31,7 @@ DEBUG=0
 NO_BACKUP=0
 FORCE_ENV=""
 NO_TUI=0
+POWERSAVE_ACTION=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -47,6 +50,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-tui)
             NO_TUI=1
+            shift
+            ;;
+        --powersave)
+            POWERSAVE_ACTION="install"
+            shift
+            ;;
+        --uninstall-powersave)
+            POWERSAVE_ACTION="uninstall"
             shift
             ;;
         --env)
@@ -87,6 +98,7 @@ source "$SCRIPT_DIR/scripts/installers/tools.sh"
 source "$SCRIPT_DIR/scripts/installers/docker.sh"
 source "$SCRIPT_DIR/scripts/installers/desktop.sh"
 source "$SCRIPT_DIR/scripts/installers/server.sh"
+source "$SCRIPT_DIR/scripts/installers/power.sh"
 
 # Cargar el archivo de configuración
 source "$ENVIRONMENTS_DIR/env.conf"
@@ -442,15 +454,23 @@ df_show_tui() {
         return 0
     fi
 
+    local items=(
+        "BASE" "Paquetes esenciales del sistema" ON
+        "SHELL" "Configuración de Zsh y herramientas CLI" ON
+        "DEV" "Entornos de desarrollo (NVM, Pyenv, etc.)" ON
+        "DOCKER" "Docker y Docker Compose" ON
+        "DESKTOP" "Aplicaciones GUI y JetBrains Toolbox" OFF
+        "SERVER" "Herramientas de monitoreo y seguridad" OFF
+    )
+    # Servicio de sistema opcional: solo tiene sentido en desktop
+    if is_desktop; then
+        items+=("POWERSAVE" "Servicio systemd: ahorro extra con perfil power-saver" OFF)
+    fi
+
     local choices
     choices=$(whiptail --title "Instalador de Dotfiles - Victor Madera" --checklist \
-        "Selecciona los módulos a instalar (Espacio para seleccionar, Enter para confirmar):" 20 75 10 \
-        "BASE" "Paquetes esenciales del sistema" ON \
-        "SHELL" "Configuración de Zsh y herramientas CLI" ON \
-        "DEV" "Entornos de desarrollo (NVM, Pyenv, etc.)" ON \
-        "DOCKER" "Docker y Docker Compose" ON \
-        "DESKTOP" "Aplicaciones GUI y JetBrains Toolbox" OFF \
-        "SERVER" "Herramientas de monitoreo y seguridad" OFF \
+        "Selecciona los módulos a instalar (Espacio para seleccionar, Enter para confirmar):" 21 75 $(( ${#items[@]} / 3 )) \
+        "${items[@]}" \
         3>&1 1>&2 2>&3)
 
     if [[ $? -ne 0 ]]; then
@@ -568,6 +588,17 @@ main() {
     df_check_prerequisites
     df_env_detect
 
+    # Acciones puntuales del servicio power-saver-extras (sin menú ni paquetes)
+    if [[ -n "$POWERSAVE_ACTION" ]]; then
+        if [[ "$POWERSAVE_ACTION" == "install" ]]; then
+            run_task "Servicio power-saver-extras" df_install_powersave
+        else
+            run_task "Desinstalar power-saver-extras" df_uninstall_powersave
+        fi
+        [[ ${#FAILED_TASKS[@]} -eq 0 ]] || exit 1
+        return 0
+    fi
+
     # Mostrar menú TUI para seleccionar módulos
     df_show_tui
 
@@ -602,6 +633,9 @@ main() {
                 run_task "JetBrains Toolbox" df_install_jetbrains
                 run_task "Aplicaciones Escritorio" df_install_desktop
                 df_run_hook "desktop" "post"
+                ;;
+            POWERSAVE)
+                run_task "Servicio power-saver-extras" df_install_powersave
                 ;;
             SERVER)
                 df_run_hook "server" "pre"

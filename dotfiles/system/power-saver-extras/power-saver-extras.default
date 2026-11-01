@@ -1,0 +1,8 @@
+# /etc/default/power-saver-extras
+# Valores aplicados mientras el perfil activo sea "power-saver".
+# Tras editar: sudo systemctl restart power-saver-extras
+
+# Frecuencia máxima de CPU en kHz (vacío = no limitar)
+MAX_FREQ_KHZ=2200000
+# Límite de potencia de la GPU NVIDIA en vatios (vacío = no limitar)
+GPU_LIMIT_W=100

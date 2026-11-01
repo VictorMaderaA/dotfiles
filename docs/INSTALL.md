@@ -24,6 +24,8 @@ cd ~/dotfiles
 | `--verbose` | Muestra información detallada de cada paso. |
 | `--debug` | Activa el modo debug de shell (muestra comandos ejecutados). |
 | `--no-backup` | No realiza copias de seguridad de los archivos existentes (usar con precaución). |
+| `--powersave` | Instala solo el servicio `power-saver-extras` (ver [power-saver.md](power-saver.md)). |
+| `--uninstall-powersave` | Desinstala ese servicio y revierte sus ajustes. |
 | `--env <env>` | Fuerza la instalación para un entorno específico (`wsl`, `desktop`, `server`). |
 
 ## 🛠️ Requisitos Previos

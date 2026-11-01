@@ -1,0 +1,15 @@
+[Unit]
+Description=Ajustes extra de ahorro de energía con el perfil power-saver
+Wants=power-profiles-daemon.service
+After=power-profiles-daemon.service nvidia-persistenced.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/power-saver-extras watch
+# Si el servicio se para o se desinstala, deja el sistema como estaba
+ExecStopPost=/usr/local/sbin/power-saver-extras revert
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
